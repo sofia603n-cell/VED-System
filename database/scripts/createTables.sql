@@ -1,92 +1,78 @@
-CREATE TABLE roles (
+-- 1. Tabla Rol
+CREATE TABLE rol (
     id_rol SERIAL PRIMARY KEY,
-    nombre_rol VARCHAR(50) NOT NULL UNIQUE
+    nombre_rol VARCHAR(50) NOT NULL
 );
 
-
-
+-- 2. Tabla Usuario
 CREATE TABLE usuario (
     id_usuario SERIAL PRIMARY KEY,
-    nombre_usuario VARCHAR(100) NOT NULL,
-    dni VARCHAR(20) UNIQUE NOT NULL,
-    contraseña VARCHAR(255) NOT NULL,
-    rol VARCHAR(20) NOT NULL,
-    estado BOOLEAN DEFAULT TRUE,
-	CONSTRAINT chk_rol 
-    CHECK (rol IN ('ADMIN','SUPER_ADMIN'))
-); 
+    documento VARCHAR(20) UNIQUE NOT NULL,
+    nombres_usuario VARCHAR(100) NOT NULL,
+    apellidos_usuario VARCHAR(100) NOT NULL,
+    nombre_usuario VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    estado BOOLEAN NOT NULL DEFAULT TRUE, -- TRUE: activo, FALSE: inactivo
+    id_rol INT NOT NULL
+);
 
-
-
-
+-- 3. Tabla Producto
 CREATE TABLE producto (
     id_producto SERIAL PRIMARY KEY,
-    nombre_producto VARCHAR(100) NOT NULL,
-    tipo VARCHAR(50),
-    precio NUMERIC(10,2) NOT NULL,
+    nombre_prodcto VARCHAR(100) NOT NULL,
+    precio_unitario NUMERIC(10, 2) NOT NULL,
+    stock_minimo INT NOT NULL DEFAULT 0,
     stock_actual INT NOT NULL DEFAULT 0,
-    stock_minimo INT NOT NULL DEFAULT 5
+    estado VARCHAR(20) NOT NULL
 );
 
-
-
+-- 4. Tabla Inventario
 CREATE TABLE inventario (
     id_inventario SERIAL PRIMARY KEY,
-    id_producto INT NOT NULL,
-    stock_actual INT NOT NULL,
-    stock_minimo INT NOT NULL,
-    ultima_actualizacion DATE DEFAULT CURRENT_DATE,
-
-    FOREIGN KEY (id_producto)
-    REFERENCES producto(id_producto)
+    fecha_inventario TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id_producto INT NOT NULL
 );
 
+-- 5. Tabla Movimiento
+CREATE TABLE movimiento (
+    id_movimientos SERIAL PRIMARY KEY,
+    fecha_hora TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    tipo_movimiento VARCHAR(50) NOT NULL,
+    cantidad INT NOT NULL,
+    id_inventario INT NOT NULL,
+    id_usuario INT NOT NULL
+);
 
+-- 6. Tabla Pedido
+CREATE TABLE pedido (
+    id_pedido SERIAL PRIMARY KEY,
+    fecha_registro_pe TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    fecha_entrega DATE,
+    porsentaje NUMERIC(5, 2), -- Porcentaje de avance o anticipo
+    estado_pedido VARCHAR(50) NOT NULL
+);
 
+-- 7. Tabla DetallePe (Detalle del Pedido)
+CREATE TABLE detalle_pe (
+    id_detalle_pe SERIAL PRIMARY KEY,
+    cantidad INT NOT NULL,
+    precio_acordado NUMERIC(10, 2) NOT NULL,
+    id_pedido INT NOT NULL,
+    id_producto INT NOT NULL
+);
 
-
+-- 8. Tabla Venta
 CREATE TABLE venta (
     id_venta SERIAL PRIMARY KEY,
-    fecha_venta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    id_usuario INT NOT NULL,
-
-    FOREIGN KEY(id_usuario)
-    REFERENCES usuario(id_usuario)
+    fecha_venta TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id_usuario INT NOT NULL
 );
 
-
-
-
-
+-- 9. Tabla DetalleVenta
 CREATE TABLE detalle_venta (
-    id_detalle SERIAL PRIMARY KEY,
-    id_venta INT NOT NULL,
-    id_producto INT NOT NULL,
+    id_detalle_venta SERIAL PRIMARY KEY,
     cantidad INT NOT NULL,
-    precio_unitario NUMERIC(10,2) NOT NULL,
-    total NUMERIC(10,2) NOT NULL,
-
-    CONSTRAINT fk_detalle_venta
-    FOREIGN KEY(id_venta)
-    REFERENCES venta(id_venta),
-
-    CONSTRAINT fk_detalle_producto
-    FOREIGN KEY(id_producto)
-    REFERENCES producto(id_producto)
+    precio_unitario NUMERIC(10, 2) NOT NULL,
+    id_venta INT NOT NULL,
+    id_producto INT NOT NULL
 );
-
-
-
-
-CREATE TABLE movimientos (
-    id_movimiento SERIAL PRIMARY KEY,
-    tipo_movimiento VARCHAR(30) NOT NULL,
-    fecha_hora TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    id_usuario INT,
-
-    CONSTRAINT fk_movimiento_usuario
-    FOREIGN KEY(id_usuario)
-    REFERENCES usuario(id_usuario)
-);
-
-
