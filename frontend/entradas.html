@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entradas — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+       <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+    </div>
+    <div class="brand-name">Tu Empresa</div>
+    <div class="brand-sub">Panel de velas</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Entradas de inventario</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" placeholder="Buscar…"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html"><i class="ti ti-bell"></i><span class="notif-dot"></span></a>
+      <a class="icon-btn" href="usuarios.html"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+
+    <div id="successMsg" class="alert-success" style="display:none"><i class="ti ti-check"></i><span id="successText"></span></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+
+      <!-- FORMULARIO -->
+      <div>
+        <div class="section-header"><div class="section-title">Registrar nueva entrada</div></div>
+        <div class="form-card">
+          <div class="form-group">
+            <label class="form-label">Producto *</label>
+            <select class="form-input" id="eProducto" style="width:100%" onchange="updateCurrentStock()">
+              <option value="">— Selecciona un producto —</option>
+            </select>
+          </div>
+          <div id="stockPreview" style="display:none;background:var(--gold-pale);border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+            <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">Stock actual</div>
+            <div style="font-size:20px;color:var(--gold);margin-top:2px" id="currentStock">—</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Cantidad a ingresar *</label>
+              <input type="number" class="form-input" id="eCantidad" placeholder="0" min="1" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Costo unitario ($)</label>
+              <input type="number" class="form-input" id="eCosto" placeholder="0" min="0">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Fecha de entrada</label>
+              <input type="date" class="form-input" id="eFecha" style="width:100%">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Proveedor</label>
+              <input type="text" class="form-input" id="eProveedor" placeholder="Nombre del proveedor">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Motivo / nota</label>
+            <select class="form-input" id="eMotivo" style="width:100%">
+              <option>Reposición de inventario</option>
+              <option>Primera carga</option>
+              <option>Devolución de proveedor</option>
+              <option>Producción propia</option>
+              <option>Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observaciones</label>
+            <textarea class="form-input" id="eObs" rows="2" placeholder="Notas adicionales…" style="resize:vertical"></textarea>
+          </div>
+          <div id="ePreview" style="font-size:13px;color:var(--success);margin-bottom:8px;display:none"></div>
+          <div id="eError" style="color:var(--danger);font-size:12px;margin-bottom:8px;display:none"></div>
+          <div class="form-actions">
+            <button class="btn-outline" onclick="clearForm()"><i class="ti ti-x"></i> Limpiar</button>
+            <button class="btn-primary" onclick="saveEntrada()"><i class="ti ti-arrow-bar-to-down"></i> Registrar entrada</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORIAL -->
+      <div>
+        <div class="section-header">
+          <div class="section-title">Historial de entradas</div>
+          <button class="btn-outline" onclick="exportCSV()"><i class="ti ti-download"></i> Exportar</button>
+        </div>
+        <div class="table-card">
+          <table>
+            <colgroup><col style="width:30%"><col style="width:15%"><col style="width:15%"><col style="width:25%"><col style="width:15%"></colgroup>
+            <thead><tr><th>Producto</th><th>Cant.</th><th>Fecha</th><th>Proveedor</th><th>Por</th></tr></thead>
+            <tbody id="historialBody"></tbody>
+          </table>
+          <div id="histEmpty" class="empty-state"><i class="ti ti-inbox"></i>No hay entradas registradas aún.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.nav-item').forEach(a=>{if(a.getAttribute('href')==='entradas.html')a.classList.add('active');});
+const u=JSON.parse(sessionStorage.getItem('user')||'{"name":"Ana Suárez","email":"admin@empresa.co","role":"supremo","initials":"AS"}');
+document.getElementById('sidebarName').textContent=u.name;
+document.getElementById('sidebarEmail').textContent=u.email;
+document.getElementById('sidebarInitials').textContent=u.initials||u.name.split(' ').map(n=>n[0]).join('');
+document.getElementById('sidebarRole').textContent=u.role==='supremo'?'Supremo':'Normal';
+
+// Set today as default date
+document.getElementById('eFecha').value = new Date().toISOString().split('T')[0];
+
+function getProds(){ return JSON.parse(localStorage.getItem('velas_products')||'[]'); }
+function getEntradas(){ return JSON.parse(localStorage.getItem('velas_entradas')||'[]'); }
+function saveEntradas(e){ localStorage.setItem('velas_entradas',JSON.stringify(e)); }
+
+function loadProductSelect(){
+  const sel = document.getElementById('eProducto');
+  const prods = getProds();
+  sel.innerHTML='<option value="">— Selecciona un producto —</option>';
+  prods.forEach((p,i)=>{ const opt=document.createElement('option'); opt.value=i; opt.textContent=p.name+' ('+p.sku+')'; sel.appendChild(opt); });
+}
+
+function updateCurrentStock(){
+  const idx = document.getElementById('eProducto').value;
+  const prods = getProds();
+  const prev = document.getElementById('stockPreview');
+  if(idx===''){prev.style.display='none';return;}
+  document.getElementById('currentStock').textContent = prods[idx].stock + ' uds';
+  prev.style.display='block';
+  updatePreview();
+}
+
+function updatePreview(){
+  const idx = document.getElementById('eProducto').value;
+  const qty = parseInt(document.getElementById('eCantidad').value)||0;
+  const prods = getProds();
+  const ep = document.getElementById('ePreview');
+  if(idx===''||qty<=0){ep.style.display='none';return;}
+  ep.textContent='Nuevo stock: '+(prods[idx].stock+qty)+' uds';
+  ep.style.display='block';
+}
+
+function saveEntrada(){
+  const idx = document.getElementById('eProducto').value;
+  const qty = parseInt(document.getElementById('eCantidad').value);
+  const ferr = document.getElementById('eError');
+  if(idx===''){ferr.textContent='Selecciona un producto.';ferr.style.display='block';return;}
+  if(!qty||qty<=0){ferr.textContent='Ingresa una cantidad válida mayor a 0.';ferr.style.display='block';return;}
+  ferr.style.display='none';
+
+  const prods = getProds();
+  prods[idx].stock += qty;
+  localStorage.setItem('velas_products',JSON.stringify(prods));
+
+  const entradas = getEntradas();
+  entradas.unshift({
+    producto: prods[idx].name,
+    sku:      prods[idx].sku,
+    cantidad: qty,
+    costo:    parseFloat(document.getElementById('eCosto').value)||0,
+    fecha:    document.getElementById('eFecha').value,
+    proveedor:document.getElementById('eProveedor').value.trim()||'Sin especificar',
+    motivo:   document.getElementById('eMotivo').value,
+    obs:      document.getElementById('eObs').value.trim(),
+    por:      u.name,
+    ts:       Date.now(),
+  });
+  saveEntradas(entradas);
+  clearForm();
+  renderHistorial();
+  showSuccess('Entrada registrada. Stock de "'+prods[idx].name+'" actualizado a '+prods[idx].stock+' uds.');
+}
+
+function clearForm(){
+  ['eProducto','eCantidad','eCosto','eProveedor','eObs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('eFecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('eMotivo').value='Reposición de inventario';
+  document.getElementById('stockPreview').style.display='none';
+  document.getElementById('ePreview').style.display='none';
+  document.getElementById('eError').style.display='none';
+}
+
+function renderHistorial(){
+  const list = getEntradas();
+  const tbody = document.getElementById('historialBody');
+  const empty = document.getElementById('histEmpty');
+  if(!list.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML = list.slice(0,20).map(e=>`<tr>
+    <td><div class="product-name">${e.producto}</div><div class="product-sku">${e.sku}</div></td>
+    <td><strong style="color:var(--success)">+${e.cantidad}</strong></td>
+    <td style="font-size:12px;color:var(--text-dim)">${e.fecha}</td>
+    <td style="font-size:12px">${e.proveedor}</td>
+    <td><span class="badge badge-gold" style="font-size:10px">${e.por.split(' ')[0]}</span></td>
+  </tr>`).join('');
+}
+
+function exportCSV(){
+  const rows=[['Producto','SKU','Cantidad','Costo','Fecha','Proveedor','Motivo','Por']];
+  getEntradas().forEach(e=>rows.push([e.producto,e.sku,e.cantidad,e.costo,e.fecha,e.proveedor,e.motivo,e.por]));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='entradas_velas.csv';a.click();
+}
+
+function showSuccess(msg){
+  document.getElementById('successText').textContent=msg;
+  const el=document.getElementById('successMsg');el.style.display='flex';
+  setTimeout(()=>el.style.display='none',3500);
+}
+
+loadProductSelect();
+renderHistorial();
+</script>
+</body>
+</html>

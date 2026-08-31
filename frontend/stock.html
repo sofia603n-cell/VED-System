@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stock — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+        <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+    </div>
+    <div class="brand-name">Tu Empresa</div>
+    <div class="brand-sub">Panel de velas</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Gestión de stock</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" id="searchInput" placeholder="Buscar producto…" oninput="renderTable()"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html"><i class="ti ti-bell"></i><span class="notif-dot"></span></a>
+      <a class="icon-btn" href="usuarios.html"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+
+    <div id="successMsg" class="alert-success" style="display:none"><i class="ti ti-check"></i><span id="successText"></span></div>
+
+    <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr)">
+      <div class="metric-card">
+        <div class="metric-label">Total unidades</div>
+        <div class="metric-value" id="totalUnits">—</div>
+        <div class="metric-sub"><i class="ti ti-package" style="font-size:12px"></i> En todos los productos</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Stock crítico</div>
+        <div class="metric-value" id="critCount" style="color:var(--danger)">—</div>
+        <div class="metric-sub" style="color:var(--danger)"><i class="ti ti-alert-circle" style="font-size:12px"></i> Requieren reposición</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Bajo el mínimo</div>
+        <div class="metric-value" id="warnCount" style="color:var(--warning)">—</div>
+        <div class="metric-sub" style="color:var(--warning)"><i class="ti ti-alert-triangle" style="font-size:12px"></i> Nivel de alerta</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">En buen nivel</div>
+        <div class="metric-value" id="okCount" style="color:var(--success)">—</div>
+        <div class="metric-sub" style="color:var(--success)"><i class="ti ti-check" style="font-size:12px"></i> Stock OK</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Estado del inventario</div>
+      <div style="display:flex;gap:10px">
+        <select id="filterSt" onchange="renderTable()" style="width:170px">
+          <option value="">Todos los estados</option>
+          <option value="danger">Crítico</option>
+          <option value="warning">Stock bajo</option>
+          <option value="success">Stock OK</option>
+        </select>
+        <a class="btn-primary" href="entradas.html"><i class="ti ti-plus"></i> Registrar entrada</a>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <colgroup>
+          <col style="width:28%"><col style="width:11%"><col style="width:10%">
+          <col style="width:22%"><col style="width:11%"><col style="width:10%"><col style="width:8%">
+        </colgroup>
+        <thead>
+          <tr><th>Producto</th><th>Stock actual</th><th>Mínimo</th><th>Nivel</th><th>Categoría</th><th>Estado</th><th>Acción</th></tr>
+        </thead>
+        <tbody id="stockBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state" style="display:none"><i class="ti ti-package"></i>No se encontraron productos.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══ MODAL AJUSTAR STOCK ═══════════════════════════ -->
+<div class="modal-overlay" id="modalStock">
+  <div class="modal">
+    <div class="modal-title" id="modalStockTitle">Ajustar stock</div>
+    <input type="hidden" id="adjIdx">
+    <div style="background:var(--gold-pale);border:0.5px solid var(--border);border-radius:8px;padding:14px;margin-bottom:18px">
+      <div style="font-size:13px;color:var(--text-muted)">Producto</div>
+      <div style="font-size:15px;font-weight:500;color:var(--white);margin-top:2px" id="adjName">—</div>
+      <div style="display:flex;gap:20px;margin-top:8px">
+        <div><div style="font-size:11px;color:var(--text-dim)">STOCK ACTUAL</div><div style="font-size:18px;font-weight:500;color:var(--gold)" id="adjCurrent">—</div></div>
+        <div><div style="font-size:11px;color:var(--text-dim)">MÍNIMO</div><div style="font-size:18px;color:var(--text-muted)" id="adjMin">—</div></div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Tipo de ajuste</label>
+      <select class="form-input" id="adjType" style="width:100%">
+        <option value="add">➕ Agregar unidades</option>
+        <option value="remove">➖ Retirar unidades</option>
+        <option value="set">📦 Establecer cantidad exacta</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Cantidad *</label>
+      <input type="number" class="form-input" id="adjQty" placeholder="0" min="0">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Motivo del ajuste</label>
+      <select class="form-input" id="adjMotivo" style="width:100%">
+        <option>Reposición de inventario</option>
+        <option>Corrección de conteo</option>
+        <option>Producto dañado / descarte</option>
+        <option>Devolución de cliente</option>
+        <option>Otro</option>
+      </select>
+    </div>
+    <div id="adjError" style="color:var(--danger);font-size:12px;display:none"></div>
+    <div id="adjPreview" style="font-size:13px;color:var(--text-muted);margin-top:6px"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeAdj()">Cancelar</button>
+      <button class="btn-primary" onclick="saveAdj()"><i class="ti ti-check"></i> Aplicar ajuste</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.nav-item').forEach(a => { if(a.getAttribute('href')==='stock.html') a.classList.add('active'); });
+const u = JSON.parse(sessionStorage.getItem('user')||'{"name":"Ana Suárez","email":"admin@empresa.co","role":"supremo","initials":"AS"}');
+document.getElementById('sidebarName').textContent = u.name;
+document.getElementById('sidebarEmail').textContent = u.email;
+document.getElementById('sidebarInitials').textContent = u.initials||u.name.split(' ').map(n=>n[0]).join('');
+document.getElementById('sidebarRole').textContent = u.role==='supremo'?'Supremo':'Normal';
+
+function getProds() { return JSON.parse(localStorage.getItem('velas_products')||'[]') || defaultProds(); }
+function defaultProds() {
+  const d = [
+    {name:'Vela Lavanda & Vainilla',sku:'VLV-001',cat:'Aromaterapia',precio:9000,stock:8,min:10,aroma:'',desc:''},
+    {name:'Vela Coco & Sándalo',sku:'VCS-002',cat:'Premium',precio:15000,stock:48,min:10,aroma:'',desc:''},
+    {name:'Vela Eucalipto Natural',sku:'VEN-003',cat:'Soy Candles',precio:9000,stock:32,min:10,aroma:'',desc:''},
+    {name:'Vela Rosa Musgo',sku:'VRM-008',cat:'Decorativas',precio:12000,stock:5,min:10,aroma:'',desc:''},
+    {name:'Vela Canela & Naranja',sku:'VCN-011',cat:'Aromaterapia',precio:8500,stock:9,min:10,aroma:'',desc:''},
+    {name:'Vela Bambú & Menta',sku:'VBM-015',cat:'Soy Candles',precio:10500,stock:24,min:10,aroma:'',desc:''},
+    {name:'Vela Bergamota & Cedro',sku:'VBC-019',cat:'Premium',precio:18000,stock:15,min:10,aroma:'',desc:''},
+  ];
+  localStorage.setItem('velas_products', JSON.stringify(d));
+  return d;
+}
+
+function getStatus(p) { if(p.stock===0)return'danger'; if(p.stock<p.min)return'warning'; return'success'; }
+function statusLabel(s){return{success:'OK',danger:'Crítico',warning:'Bajo'}[s];}
+function badgeCls(s){return{success:'badge-success',danger:'badge-danger',warning:'badge-warning'}[s];}
+function fillColor(s){return{success:'#4CAF50',danger:'#EF5350',warning:'#FFA726'}[s];}
+
+function updateMetrics(prods) {
+  let total=0,crit=0,warn=0,ok=0;
+  prods.forEach(p => {
+    total += p.stock;
+    const s = getStatus(p);
+    if(s==='danger') crit++;
+    else if(s==='warning') warn++;
+    else ok++;
+  });
+  document.getElementById('totalUnits').textContent = total.toLocaleString();
+  document.getElementById('critCount').textContent  = crit;
+  document.getElementById('warnCount').textContent  = warn;
+  document.getElementById('okCount').textContent    = ok;
+}
+
+function renderTable() {
+  const prods = getProds();
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const st  = document.getElementById('filterSt').value;
+  updateMetrics(prods);
+
+  let list = prods.map((p,i)=>({...p,idx:i}));
+  if(q)  list = list.filter(p=>p.name.toLowerCase().includes(q)||p.sku.toLowerCase().includes(q));
+  if(st) list = list.filter(p=>getStatus(p)===st);
+  list.sort((a,b)=>{ const sa=getStatus(a),sb=getStatus(b); const ord={danger:0,warning:1,success:2}; return ord[sa]-ord[sb]; });
+
+  const tbody = document.getElementById('stockBody');
+  const empty = document.getElementById('emptyState');
+  if(!list.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+
+  tbody.innerHTML = list.map(p=>{
+    const s   = getStatus(p);
+    const max = Math.max(p.stock, p.min*2, 1);
+    const pct = Math.min(100, Math.round((p.stock/max)*100));
+    return `<tr>
+      <td><div class="product-name">${p.name}</div><div class="product-sku">${p.sku}</div></td>
+      <td><strong style="font-size:15px">${p.stock}</strong></td>
+      <td>${p.min}</td>
+      <td><div class="stock-bar-wrap">
+        <div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${fillColor(s)}"></div></div>
+        <span style="font-size:11px;color:${fillColor(s)}">${pct}%</span>
+      </div></td>
+      <td><span class="badge badge-neutral">${p.cat}</span></td>
+      <td><span class="badge ${badgeCls(s)}">${statusLabel(s)}</span></td>
+      <td><button class="btn-primary" style="padding:5px 10px;font-size:12px" onclick="openAdj(${p.idx})"><i class="ti ti-adjustments"></i> Ajustar</button></td>
+    </tr>`;
+  }).join('');
+}
+
+let adjIdx = -1;
+function openAdj(idx){
+  const p = getProds()[idx];
+  adjIdx = idx;
+  document.getElementById('adjIdx').value     = idx;
+  document.getElementById('adjName').textContent    = p.name;
+  document.getElementById('adjCurrent').textContent = p.stock;
+  document.getElementById('adjMin').textContent     = p.min;
+  document.getElementById('adjQty').value = '';
+  document.getElementById('adjError').style.display = 'none';
+  document.getElementById('adjPreview').textContent = '';
+  document.getElementById('modalStock').classList.add('open');
+}
+
+function closeAdj(){ document.getElementById('modalStock').classList.remove('open'); }
+
+document.getElementById('adjQty').addEventListener('input', previewAdj);
+document.getElementById('adjType').addEventListener('change', previewAdj);
+
+function previewAdj(){
+  const prods = getProds();
+  const p   = prods[adjIdx];
+  const qty = parseInt(document.getElementById('adjQty').value)||0;
+  const tp  = document.getElementById('adjType').value;
+  let result = tp==='add'?p.stock+qty : tp==='remove'?p.stock-qty : qty;
+  document.getElementById('adjPreview').textContent = result >= 0 ? 'Resultado: '+result+' unidades' : '';
+}
+
+function saveAdj(){
+  const prods = getProds();
+  const qty   = parseInt(document.getElementById('adjQty').value);
+  const tp    = document.getElementById('adjType').value;
+  const ferr  = document.getElementById('adjError');
+  if(isNaN(qty)||qty<0){ferr.textContent='Ingresa una cantidad válida.';ferr.style.display='block';return;}
+
+  let newStock = tp==='add'?prods[adjIdx].stock+qty : tp==='remove'?prods[adjIdx].stock-qty : qty;
+  if(newStock<0){ferr.textContent='El stock no puede ser negativo.';ferr.style.display='block';return;}
+  ferr.style.display='none';
+
+  prods[adjIdx].stock = newStock;
+  localStorage.setItem('velas_products', JSON.stringify(prods));
+  closeAdj();
+  renderTable();
+  showSuccess('Stock ajustado correctamente. Nuevo stock: '+newStock+' uds.');
+}
+
+function showSuccess(msg){
+  document.getElementById('successText').textContent=msg;
+  const el=document.getElementById('successMsg');
+  el.style.display='flex';
+  setTimeout(()=>el.style.display='none',3500);
+}
+
+document.getElementById('modalStock').addEventListener('click', e=>{if(e.target.id==='modalStock')closeAdj();});
+renderTable();
+</script>
+</body>
+</html>

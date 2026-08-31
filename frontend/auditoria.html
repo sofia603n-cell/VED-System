@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auditoría — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+     <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+      <div class="logo-placeholder"><i class="ti ti-photo"></i><span>Logo empresa</span></div>
+    </div>
+    <div class="brand-name">Tu Empresa</div>
+    <div class="brand-sub">Panel de velas</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Registro de auditoría</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" id="searchInput" placeholder="Buscar acción…" oninput="renderLog()"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html"><i class="ti ti-bell"></i></a>
+      <a class="icon-btn" href="usuarios.html"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+
+    <!-- MÉTRICAS -->
+    <div class="metrics-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      <div class="metric-card">
+        <div class="metric-label">Acciones hoy</div>
+        <div class="metric-value" id="mHoy">—</div>
+        <div class="metric-sub"><i class="ti ti-calendar" style="font-size:12px"></i> Registros del día</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Ventas registradas</div>
+        <div class="metric-value" id="mVentas">—</div>
+        <div class="metric-sub"><i class="ti ti-shopping-bag" style="font-size:12px;color:var(--gold)"></i> Total del sistema</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Ediciones</div>
+        <div class="metric-value" id="mEdits">—</div>
+        <div class="metric-sub"><i class="ti ti-edit" style="font-size:12px;color:var(--blue)"></i> Modificaciones</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Eliminaciones</div>
+        <div class="metric-value" id="mDels" style="color:var(--danger)">—</div>
+        <div class="metric-sub"><i class="ti ti-trash" style="font-size:12px;color:var(--danger)"></i> Registros borrados</div>
+      </div>
+    </div>
+
+    <!-- FILTROS -->
+    <div class="section-header">
+      <div class="section-title">Historial de acciones</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="filterTipo" onchange="renderLog()" style="width:160px">
+          <option value="">Todos los tipos</option>
+          <option value="venta">Ventas</option>
+          <option value="producto">Productos</option>
+          <option value="stock">Stock / Entradas</option>
+          <option value="usuario">Usuarios</option>
+          <option value="sesion">Sesión</option>
+        </select>
+        <select id="filterUser" onchange="renderLog()" style="width:150px">
+          <option value="">Todos los usuarios</option>
+        </select>
+        <input type="date" id="filterFecha" onchange="renderLog()" style="width:145px">
+        <button class="btn-outline" onclick="clearFilters()"><i class="ti ti-x"></i> Limpiar</button>
+        <button class="btn-outline" onclick="exportCSV()"><i class="ti ti-download"></i> Exportar</button>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <colgroup>
+          <col style="width:16%"><col style="width:13%"><col style="width:25%">
+          <col style="width:26%"><col style="width:11%"><col style="width:9%">
+        </colgroup>
+        <thead>
+          <tr><th>Fecha y hora</th><th>Usuario</th><th>Acción</th><th>Detalle</th><th>Tipo</th><th>Estado</th></tr>
+        </thead>
+        <tbody id="logBody"></tbody>
+      </table>
+      <div id="logEmpty" class="empty-state"><i class="ti ti-clipboard-list"></i>No hay registros de auditoría aún.</div>
+      <div id="logPager" style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-top:0.5px solid var(--border)">
+        <span id="logInfo" style="font-size:12px;color:var(--text-dim)"></span>
+        <div style="display:flex;gap:6px">
+          <button class="btn-outline" id="btnPrev" onclick="changePage(-1)" style="padding:5px 10px;font-size:12px"><i class="ti ti-chevron-left"></i> Anterior</button>
+          <button class="btn-outline" id="btnNext" onclick="changePage(1)" style="padding:5px 10px;font-size:12px">Siguiente <i class="ti ti-chevron-right"></i></button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.nav-item').forEach(a=>{if(a.getAttribute('href')==='auditoria.html')a.classList.add('active');});
+const u=JSON.parse(sessionStorage.getItem('user')||'{"name":"Ana Suárez","email":"admin@empresa.co","role":"supremo","initials":"AS"}');
+document.getElementById('sidebarName').textContent=u.name;
+document.getElementById('sidebarEmail').textContent=u.email;
+document.getElementById('sidebarInitials').textContent=u.initials||u.name.split(' ').map(n=>n[0]).join('');
+document.getElementById('sidebarRole').textContent=u.role==='supremo'?'Supremo':'Normal';
+
+const PAGE_SIZE=15;
+let currentPage=0;
+let filtered=[];
+
+function getLogs(){
+  const stored=localStorage.getItem('velas_logs');
+  if(stored){const l=JSON.parse(stored);if(l.length)return l;}
+
+  // Generate demo logs from real data + demo baseline
+  const logs=[];
+  const today=new Date().toISOString().split('T')[0];
+  const yesterday=new Date(Date.now()-86400000).toISOString().split('T')[0];
+  const demoBase=[
+    {ts:Date.now()-7200000,user:'Ana Suárez',tipo:'venta',accion:'Registró venta #V-0142',detalle:'Lavanda & Vainilla × 3 — $27,000',estado:'exitoso'},
+    {ts:Date.now()-18000000,user:'Carlos Mora',tipo:'venta',accion:'Registró venta #V-0141',detalle:'Coco & Sándalo × 2 — $30,000',estado:'exitoso'},
+    {ts:Date.now()-86400000,user:'Ana Suárez',tipo:'producto',accion:'Editó producto VCS-002',detalle:'Precio: $14,000 → $15,000',estado:'exitoso'},
+    {ts:Date.now()-86400000*2,user:'Carlos Mora',tipo:'stock',accion:'Registró entrada de stock',detalle:'VEN-003 +30 unidades',estado:'exitoso'},
+    {ts:Date.now()-86400000*2,user:'Ana Suárez',tipo:'producto',accion:'Eliminó producto',detalle:'Vela Pino Natural (descontinuada)',estado:'eliminado'},
+    {ts:Date.now()-86400000*3,user:'Ana Suárez',tipo:'usuario',accion:'Creó usuario',detalle:'carlos@empresa.co — Admin Normal',estado:'exitoso'},
+    {ts:Date.now()-86400000*3,user:'Ana Suárez',tipo:'sesion',accion:'Inició sesión',detalle:'Acceso desde panel web',estado:'exitoso'},
+    {ts:Date.now()-86400000*4,user:'Carlos Mora',tipo:'sesion',accion:'Cerró sesión',detalle:'Sesión finalizada correctamente',estado:'exitoso'},
+    {ts:Date.now()-86400000*4,user:'Ana Suárez',tipo:'stock',accion:'Ajustó stock',detalle:'VLV-001: 12 → 20 unidades',estado:'exitoso'},
+    {ts:Date.now()-86400000*5,user:'Carlos Mora',tipo:'venta',accion:'Registró venta #V-0138',detalle:'Canela & Naranja × 4 — $34,000',estado:'exitoso'},
+    {ts:Date.now()-86400000*5,user:'Ana Suárez',tipo:'producto',accion:'Agregó producto',detalle:'Vela Bergamota & Cedro (VBC-019)',estado:'exitoso'},
+    {ts:Date.now()-86400000*6,user:'Ana Suárez',tipo:'usuario',accion:'Cambió contraseña',detalle:'Usuario: carlos@empresa.co',estado:'exitoso'},
+  ];
+  localStorage.setItem('velas_logs',JSON.stringify(demoBase));
+  return demoBase;
+}
+
+function saveLogs(l){localStorage.setItem('velas_logs',JSON.stringify(l));}
+
+function formatTs(ts){
+  const d=new Date(ts);
+  return d.toLocaleDateString('es-CO',{day:'2-digit',month:'short',year:'numeric'})+', '+d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'});
+}
+
+function tipoBadge(tipo){
+  const map={venta:'badge-gold',producto:'badge-blue',stock:'badge-neutral',usuario:'badge-warning',sesion:'badge-success'};
+  return map[tipo]||'badge-neutral';
+}
+function estadoBadge(e){
+  if(e==='exitoso')return'badge-success';
+  if(e==='eliminado')return'badge-danger';
+  if(e==='fallido')return'badge-warning';
+  return'badge-neutral';
+}
+function userBadge(name){
+  const users=JSON.parse(localStorage.getItem('velas_users')||'[]');
+  const found=users.find(u=>u.name===name);
+  const isSupremo=found?found.role==='supremo':name.includes('Ana');
+  return isSupremo?'badge-gold':'badge-blue';
+}
+
+function loadUserFilter(){
+  const logs=getLogs();
+  const names=[...new Set(logs.map(l=>l.user))];
+  const sel=document.getElementById('filterUser');
+  names.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;sel.appendChild(o);});
+}
+
+function updateMetrics(logs){
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('mHoy').textContent=logs.filter(l=>new Date(l.ts).toISOString().split('T')[0]===today).length;
+  document.getElementById('mVentas').textContent=logs.filter(l=>l.tipo==='venta').length;
+  document.getElementById('mEdits').textContent=logs.filter(l=>l.accion&&l.accion.toLowerCase().includes('edit')).length;
+  document.getElementById('mDels').textContent=logs.filter(l=>l.estado==='eliminado').length;
+}
+
+function renderLog(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const tipo=document.getElementById('filterTipo').value;
+  const usr=document.getElementById('filterUser').value;
+  const fecha=document.getElementById('filterFecha').value;
+  const all=getLogs();
+
+  updateMetrics(all);
+
+  filtered=all.filter(l=>{
+    if(q&&!l.accion.toLowerCase().includes(q)&&!l.detalle.toLowerCase().includes(q)&&!l.user.toLowerCase().includes(q))return false;
+    if(tipo&&l.tipo!==tipo)return false;
+    if(usr&&l.user!==usr)return false;
+    if(fecha&&new Date(l.ts).toISOString().split('T')[0]!==fecha)return false;
+    return true;
+  });
+  filtered.sort((a,b)=>b.ts-a.ts);
+
+  currentPage=0;
+  renderPage();
+}
+
+function renderPage(){
+  const start=currentPage*PAGE_SIZE;
+  const page=filtered.slice(start,start+PAGE_SIZE);
+  const tbody=document.getElementById('logBody');
+  const empty=document.getElementById('logEmpty');
+  const pager=document.getElementById('logPager');
+
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';pager.style.display='none';return;}
+  empty.style.display='none';
+  pager.style.display='flex';
+
+  tbody.innerHTML=page.map(l=>`<tr>
+    <td style="font-size:12px;color:var(--text-dim)">${formatTs(l.ts)}</td>
+    <td><span class="badge ${userBadge(l.user)}" style="font-size:11px">${l.user.split(' ')[0]+' '+l.user.split(' ').pop().charAt(0)+'.'}</span></td>
+    <td style="font-size:13px">${l.accion}</td>
+    <td style="font-size:12px;color:var(--text-muted)">${l.detalle}</td>
+    <td><span class="badge ${tipoBadge(l.tipo)}" style="font-size:10px;text-transform:capitalize">${l.tipo}</span></td>
+    <td><span class="badge ${estadoBadge(l.estado)}" style="font-size:10px;text-transform:capitalize">${l.estado}</span></td>
+  </tr>`).join('');
+
+  const total=filtered.length;
+  const pages=Math.ceil(total/PAGE_SIZE);
+  document.getElementById('logInfo').textContent='Mostrando '+(start+1)+'-'+Math.min(start+PAGE_SIZE,total)+' de '+total+' registros';
+  document.getElementById('btnPrev').disabled=currentPage===0;
+  document.getElementById('btnNext').disabled=currentPage>=pages-1;
+}
+
+function changePage(dir){
+  currentPage+=dir;
+  renderPage();
+}
+
+function clearFilters(){
+  document.getElementById('searchInput').value='';
+  document.getElementById('filterTipo').value='';
+  document.getElementById('filterUser').value='';
+  document.getElementById('filterFecha').value='';
+  renderLog();
+}
+
+function exportCSV(){
+  const rows=[['Fecha','Usuario','Acción','Detalle','Tipo','Estado']];
+  filtered.forEach(l=>rows.push([new Date(l.ts).toLocaleString('es-CO'),l.user,l.accion,l.detalle,l.tipo,l.estado]));
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);a.download='auditoria_velas.csv';a.click();
+}
+
+// Log this session access
+(function(){
+  const logs=getLogs();
+  logs.unshift({ts:Date.now(),user:u.name,tipo:'sesion',accion:'Consultó auditoría',detalle:'Vista de registro de acciones',estado:'exitoso'});
+  saveLogs(logs);
+})();
+
+loadUserFilter();
+renderLog();
+</script>
+</body>
+</html>

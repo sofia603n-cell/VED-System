@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Usuarios — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+    </div>
+    <div class="brand-name">Tu Empresa</div>
+    <div class="brand-sub">Panel de velas</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Gestión de usuarios</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" id="searchInput" placeholder="Buscar usuario…" oninput="renderUsers()"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html"><i class="ti ti-bell"></i><span class="notif-dot"></span></a>
+      <a class="icon-btn" href="usuarios.html"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+
+    <div id="successMsg" class="alert-success" style="display:none"><i class="ti ti-check"></i><span id="successText"></span></div>
+    <div id="permError" class="alert-bar" style="display:none"><i class="ti ti-lock"></i><span id="permText">Solo el Admin Supremo puede realizar esta acción.</span></div>
+
+    <div class="section-header">
+      <div class="section-title">Administradores del sistema</div>
+      <button class="btn-primary" onclick="openModal('nuevo')"><i class="ti ti-user-plus"></i> Crear usuario</button>
+    </div>
+
+    <div class="users-grid" id="usersGrid"></div>
+
+  </div>
+</div>
+
+<!-- MODAL CREAR / EDITAR USUARIO -->
+<div class="modal-overlay" id="modalUser">
+  <div class="modal">
+    <div class="modal-title" id="modalUserTitle">Crear usuario</div>
+    <input type="hidden" id="editIdx" value="-1">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nombre *</label>
+        <input type="text" class="form-input" id="uNombre" placeholder="Nombre completo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Iniciales</label>
+        <input type="text" class="form-input" id="uIniciales" placeholder="Ej. AS" maxlength="3">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Correo electrónico *</label>
+      <input type="email" class="form-input" id="uEmail" placeholder="usuario@empresa.co">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Contraseña *</label>
+        <input type="password" class="form-input" id="uPwd" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar contraseña</label>
+        <input type="password" class="form-input" id="uPwd2" placeholder="Repetir contraseña">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Rol *</label>
+      <select class="form-input" id="uRol" style="width:100%">
+        <option value="normal">Admin Normal — puede registrar ventas y ver inventario</option>
+        <option value="supremo">Admin Supremo — acceso total al sistema</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Estado</label>
+      <select class="form-input" id="uEstado" style="width:100%">
+        <option value="activo">Activo</option>
+        <option value="inactivo">Inactivo</option>
+      </select>
+    </div>
+    <div id="uError" style="color:var(--danger);font-size:12px;margin-top:4px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveUser()"><i class="ti ti-check"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CONFIRMAR ELIMINAR -->
+<div class="modal-overlay" id="modalDel">
+  <div class="confirm-modal">
+    <div class="icon">⚠️</div>
+    <h3>¿Eliminar usuario?</h3>
+    <p id="delMsg">El usuario será eliminado permanentemente del sistema.</p>
+    <div class="btns">
+      <button class="btn-outline" onclick="closeDel()">Cancelar</button>
+      <button class="btn-danger" onclick="confirmDel()"><i class="ti ti-trash"></i> Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VER PERFIL -->
+<div class="modal-overlay" id="modalPerfil">
+  <div class="modal">
+    <div class="modal-title">Perfil de usuario</div>
+    <div class="detail-grid" id="perfilDetail"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="document.getElementById('modalPerfil').classList.remove('open')">Cerrar</button>
+      <button class="btn-primary" id="perfilEditBtn"><i class="ti ti-edit"></i> Editar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.nav-item').forEach(a=>{if(a.getAttribute('href')==='usuarios.html')a.classList.add('active');});
+const u=JSON.parse(sessionStorage.getItem('user')||'{"name":"Ana Suárez","email":"admin@empresa.co","role":"supremo","initials":"AS"}');
+document.getElementById('sidebarName').textContent=u.name;
+document.getElementById('sidebarEmail').textContent=u.email;
+document.getElementById('sidebarInitials').textContent=u.initials||u.name.split(' ').map(n=>n[0]).join('');
+document.getElementById('sidebarRole').textContent=u.role==='supremo'?'Supremo':'Normal';
+
+function getUsers(){
+  const stored=localStorage.getItem('velas_users');
+  if(stored) return JSON.parse(stored);
+  const def=[
+    {name:'Ana Suárez',initials:'AS',email:'admin@empresa.co',pwd:'admin123',role:'supremo',estado:'activo',ventas:84,acceso:'Hoy'},
+    {name:'Carlos Mora',initials:'CM',email:'carlos@empresa.co',pwd:'carlos123',role:'normal',estado:'activo',ventas:61,acceso:'Ayer'},
+  ];
+  localStorage.setItem('velas_users',JSON.stringify(def));
+  return def;
+}
+function saveUsers(users){localStorage.setItem('velas_users',JSON.stringify(users));}
+
+function renderUsers(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  let users=getUsers().map((u,i)=>({...u,idx:i}));
+  if(q) users=users.filter(u=>u.name.toLowerCase().includes(q)||u.email.toLowerCase().includes(q));
+
+  const grid=document.getElementById('usersGrid');
+  if(!users.length){grid.innerHTML='<div class="empty-state" style="grid-column:1/-1"><i class="ti ti-users"></i>No se encontraron usuarios.</div>';return;}
+
+  grid.innerHTML=users.map(us=>{
+    const isSupremo=us.role==='supremo';
+    const isInactive=us.estado==='inactivo';
+    return `<div class="user-card" style="${isInactive?'opacity:0.6':''}">
+      <div class="user-card-top">
+        <div class="user-av-lg ${isSupremo?'av-supreme':'av-normal'}">${us.initials||us.name.split(' ').map(n=>n[0]).join('')}</div>
+        <div style="flex:1;min-width:0">
+          <div class="user-card-name">${us.name}</div>
+          <div class="user-card-email">${us.email}</div>
+          <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap">
+            <span class="badge ${isSupremo?'badge-gold':'badge-blue'}">${isSupremo?'Admin Supremo':'Admin Normal'}</span>
+            <span class="badge ${isInactive?'badge-danger':'badge-success'}">${isInactive?'Inactivo':'Activo'}</span>
+          </div>
+        </div>
+      </div>
+      <div class="user-card-stats">
+        <div><div class="uc-stat-label">Ventas registradas</div><div class="uc-stat-val">${us.ventas||0}</div></div>
+        <div><div class="uc-stat-label">Último acceso</div><div class="uc-stat-val">${us.acceso||'—'}</div></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="btn-outline" style="flex:1;justify-content:center;font-size:12px" onclick="verPerfil(${us.idx})"><i class="ti ti-eye"></i> Ver</button>
+        <button class="btn-outline" style="flex:1;justify-content:center;font-size:12px" onclick="openModal('editar',${us.idx})"><i class="ti ti-edit"></i> Editar</button>
+        ${us.email!==u.email?'<button class="act-btn del" onclick="openDel('+us.idx+')" title="Eliminar"><i class="ti ti-trash"></i></button>':''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let delIdx=-1;
+let viewIdx=-1;
+
+function openModal(mode,idx){
+  if(u.role!=='supremo'){showPermError();return;}
+  document.getElementById('uError').style.display='none';
+  document.getElementById('editIdx').value=idx!==undefined?idx:-1;
+  document.getElementById('modalUserTitle').textContent=mode==='editar'?'Editar usuario':'Crear usuario';
+  if(mode==='editar'){
+    const us=getUsers()[idx];
+    document.getElementById('uNombre').value=us.name;
+    document.getElementById('uIniciales').value=us.initials||'';
+    document.getElementById('uEmail').value=us.email;
+    document.getElementById('uPwd').value='';
+    document.getElementById('uPwd2').value='';
+    document.getElementById('uRol').value=us.role;
+    document.getElementById('uEstado').value=us.estado||'activo';
+  } else {
+    ['uNombre','uIniciales','uEmail','uPwd','uPwd2'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('uRol').value='normal';
+    document.getElementById('uEstado').value='activo';
+  }
+  document.getElementById('modalUser').classList.add('open');
+}
+function closeModal(){document.getElementById('modalUser').classList.remove('open');}
+
+function saveUser(){
+  const nombre=document.getElementById('uNombre').value.trim();
+  const email=document.getElementById('uEmail').value.trim();
+  const pwd=document.getElementById('uPwd').value;
+  const pwd2=document.getElementById('uPwd2').value;
+  const ferr=document.getElementById('uError');
+  const idx=parseInt(document.getElementById('editIdx').value);
+
+  if(!nombre||!email){ferr.textContent='Nombre y correo son obligatorios.';ferr.style.display='block';return;}
+  if(idx===-1&&!pwd){ferr.textContent='La contraseña es obligatoria para nuevos usuarios.';ferr.style.display='block';return;}
+  if(pwd&&pwd.length<6){ferr.textContent='La contraseña debe tener al menos 6 caracteres.';ferr.style.display='block';return;}
+  if(pwd&&pwd!==pwd2){ferr.textContent='Las contraseñas no coinciden.';ferr.style.display='block';return;}
+  ferr.style.display='none';
+
+  const users=getUsers();
+  const emailTaken=users.some((us,i)=>us.email===email&&i!==idx);
+  if(emailTaken){ferr.textContent='Ya existe un usuario con ese correo.';ferr.style.display='block';return;}
+
+  const initials=document.getElementById('uIniciales').value.trim()||nombre.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+  const obj={
+    name:nombre,initials:initials,email:email,
+    pwd:pwd||users[idx]?.pwd||'',
+    role:document.getElementById('uRol').value,
+    estado:document.getElementById('uEstado').value,
+    ventas:users[idx]?.ventas||0,
+    acceso:users[idx]?.acceso||'Nunca',
+  };
+
+  if(idx>=0) users[idx]=obj;
+  else users.push(obj);
+  saveUsers(users);
+  closeModal();
+  renderUsers();
+  showSuccess(idx>=0?'Usuario actualizado correctamente.':'Usuario creado correctamente.');
+}
+
+function openDel(idx){
+  if(u.role!=='supremo'){showPermError();return;}
+  delIdx=idx;
+  const us=getUsers()[idx];
+  document.getElementById('delMsg').textContent='Se eliminará el usuario "'+us.name+'" ('+us.email+'). Esta acción no se puede deshacer.';
+  document.getElementById('modalDel').classList.add('open');
+}
+function closeDel(){document.getElementById('modalDel').classList.remove('open');}
+function confirmDel(){
+  const users=getUsers();
+  users.splice(delIdx,1);
+  saveUsers(users);
+  closeDel();
+  renderUsers();
+  showSuccess('Usuario eliminado correctamente.');
+}
+
+function verPerfil(idx){
+  viewIdx=idx;
+  const us=getUsers()[idx];
+  document.getElementById('perfilDetail').innerHTML=`
+    <div class="detail-item"><div class="lbl">Nombre</div><div class="val">${us.name}</div></div>
+    <div class="detail-item"><div class="lbl">Iniciales</div><div class="val">${us.initials||'—'}</div></div>
+    <div class="detail-item"><div class="lbl">Correo</div><div class="val">${us.email}</div></div>
+    <div class="detail-item"><div class="lbl">Rol</div><div class="val"><span class="badge ${us.role==='supremo'?'badge-gold':'badge-blue'}">${us.role==='supremo'?'Admin Supremo':'Admin Normal'}</span></div></div>
+    <div class="detail-item"><div class="lbl">Estado</div><div class="val"><span class="badge ${us.estado==='activo'?'badge-success':'badge-danger'}">${us.estado||'activo'}</span></div></div>
+    <div class="detail-item"><div class="lbl">Ventas registradas</div><div class="val">${us.ventas||0}</div></div>
+    <div class="detail-item"><div class="lbl">Último acceso</div><div class="val">${us.acceso||'—'}</div></div>
+  `;
+  document.getElementById('perfilEditBtn').onclick=()=>{document.getElementById('modalPerfil').classList.remove('open');openModal('editar',idx);};
+  document.getElementById('modalPerfil').classList.add('open');
+}
+
+function showPermError(){
+  document.getElementById('permText').textContent='Solo el Admin Supremo puede realizar esta acción.';
+  const el=document.getElementById('permError');el.style.display='flex';
+  setTimeout(()=>el.style.display='none',3000);
+}
+function showSuccess(msg){
+  document.getElementById('successText').textContent=msg;
+  const el=document.getElementById('successMsg');el.style.display='flex';
+  setTimeout(()=>el.style.display='none',3500);
+}
+
+['modalUser','modalDel','modalPerfil'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.remove('open');});
+});
+
+renderUsers();
+</script>
+</body>
+</html>

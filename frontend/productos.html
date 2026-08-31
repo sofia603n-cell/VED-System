@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Productos — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+ 
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-img-wrap">
+          <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+    </div>
+    <div class="brand-name">Tu Empresa</div>
+    <div class="brand-sub">Panel de velas</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+ 
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Catálogo de productos</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" id="searchInput" placeholder="Buscar producto…" oninput="filterTable()"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html" title="Notificaciones"><i class="ti ti-bell"></i><span class="notif-dot"></span></a>
+      <a class="icon-btn" href="usuarios.html" title="Configuración"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+ 
+    <div class="alert-bar" id="alertStock" style="display:none">
+      <i class="ti ti-alert-triangle"></i>
+      <span id="alertStockText"></span>
+      <a href="stock.html" style="color:var(--warning);margin-left:6px;text-decoration:underline">Revisar stock →</a>
+    </div>
+ 
+    <div id="successMsg" class="alert-success" style="display:none">
+      <i class="ti ti-check"></i> <span id="successText">Operación realizada correctamente.</span>
+    </div>
+ 
+    <div class="section-header">
+      <div class="section-title">Todos los productos</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-outline" onclick="exportCSV()"><i class="ti ti-download"></i> Exportar</button>
+        <button class="btn-primary" onclick="openModal('nuevo')"><i class="ti ti-plus"></i> Nuevo producto</button>
+      </div>
+    </div>
+ 
+    <div class="filters-row">
+      <select id="filterCat" onchange="filterTable()" style="width:200px">
+        <option value="">Todas las categorías</option>
+        <option>Veladora</option>
+        <option>Veladora Especial</option>
+        <option>Pebetero</option>
+        <option>Vela Lisa</option>
+        <option>Vela Acanalada</option>
+        <option>Vela Aromatizada</option>
+        <option>Vela Personalizada</option>
+        <option>Parafina</option>
+      </select>
+      <select id="filterSt" onchange="filterTable()" style="width:160px">
+        <option value="">Todos los estados</option>
+        <option value="success">En stock</option>
+        <option value="danger">Sin stock</option>
+        <option value="warning">Stock bajo</option>
+      </select>
+      <select id="filterSort" onchange="filterTable()" style="width:185px">
+        <option value="name">Ordenar: nombre A-Z</option>
+        <option value="ref">Ordenar: referencia</option>
+        <option value="price">Ordenar: precio ↑</option>
+        <option value="stock">Ordenar: stock ↓</option>
+      </select>
+    </div>
+ 
+    <div class="table-card">
+      <table>
+        <colgroup>
+          <col style="width:26%"><col style="width:14%"><col style="width:10%">
+          <col style="width:8%"><col style="width:17%"><col style="width:12%"><col style="width:13%">
+        </colgroup>
+        <thead>
+          <tr><th>Producto</th><th>Categoría</th><th>Precio</th><th>Stock</th><th>Disponibilidad</th><th>Estado</th><th>Acciones</th></tr>
+        </thead>
+        <tbody id="productsBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state" style="display:none">
+        <i class="ti ti-candle"></i> No se encontraron productos con esos filtros.
+      </div>
+    </div>
+ 
+  </div>
+</div>
+ 
+<!-- ══ MODAL NUEVO / EDITAR ══════════════════════════ -->
+<div class="modal-overlay" id="modalProducto">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle">Nuevo producto</div>
+    <input type="hidden" id="editIndex" value="-1">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Nombre *</label>
+        <input type="text" class="form-input" id="pNombre" placeholder="Ej. Veladora Ref #1">
+      </div>
+      <div class="form-group">
+        <label class="form-label">SKU / Referencia *</label>
+        <input type="text" class="form-input" id="pSku" placeholder="Ej. VED-REF1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Categoría *</label>
+        <select class="form-input" id="pCat" style="width:100%">
+          <option>Veladora</option>
+          <option>Veladora Especial</option>
+          <option>Pebetero</option>
+          <option>Vela Lisa</option>
+          <option>Vela Acanalada</option>
+          <option>Vela Aromatizada</option>
+          <option>Vela Personalizada</option>
+          <option>Parafina</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Precio ($) *</label>
+        <input type="number" class="form-input" id="pPrecio" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Stock inicial *</label>
+        <input type="number" class="form-input" id="pStock" placeholder="0" min="0">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Stock mínimo</label>
+        <input type="number" class="form-input" id="pMin" placeholder="10" min="0" value="10">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Medidas (alto x diámetro)</label>
+        <input type="text" class="form-input" id="pMedidas" placeholder="Ej. 4.2 cm x 4 cm">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Presentación (und por caja)</label>
+        <input type="text" class="form-input" id="pPresent" placeholder="Ej. x12 und / x24 und">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Colores disponibles</label>
+      <input type="text" class="form-input" id="pColores" placeholder="Ej. Blanco, Surtido, Unicolor">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descripción / notas</label>
+      <textarea class="form-input" id="pDesc" rows="2" placeholder="Notas adicionales…" style="resize:vertical"></textarea>
+    </div>
+    <div id="formError" style="color:var(--danger);font-size:12px;margin-top:4px;display:none"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeModal()">Cancelar</button>
+      <button class="btn-primary" onclick="saveProduct()"><i class="ti ti-check"></i> Guardar</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- ══ MODAL CONFIRMAR ELIMINAR ═════════════════════ -->
+<div class="modal-overlay" id="modalConfirm">
+  <div class="confirm-modal">
+    <div class="icon">🗑️</div>
+    <h3>¿Eliminar producto?</h3>
+    <p>Esta acción no se puede deshacer. El producto será eliminado permanentemente del catálogo.</p>
+    <div class="btns">
+      <button class="btn-outline" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn-danger" onclick="confirmDelete()"><i class="ti ti-trash"></i> Sí, eliminar</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- ══ MODAL VER DETALLE ════════════════════════════ -->
+<div class="modal-overlay" id="modalVer">
+  <div class="modal">
+    <div class="modal-title">Detalle del producto</div>
+    <!-- ESPACIO PARA FOTO DEL PRODUCTO -->
+    <div id="productPhotoWrap" style="width:100%;height:120px;border-radius:10px;border:0.5px dashed var(--border-med);background:var(--gold-pale);display:flex;align-items:center;justify-content:center;margin-bottom:16px;flex-direction:column;gap:4px;color:var(--text-dim)">
+      <i class="ti ti-camera" style="font-size:26px;color:var(--gold);opacity:0.5"></i>
+      <span style="font-size:11px;text-transform:uppercase;letter-spacing:.06em">Espacio para foto del producto</span>
+    </div>
+    <div class="detail-grid" id="detailGrid"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="closeVer()">Cerrar</button>
+      <button class="btn-primary" onclick="editFromDetail()"><i class="ti ti-edit"></i> Editar</button>
+    </div>
+  </div>
+</div>
+ 
+<script>
+document.querySelectorAll('.nav-item').forEach(a => { if(a.getAttribute('href')==='productos.html') a.classList.add('active'); });
+const u = JSON.parse(sessionStorage.getItem('user')||'{"name":"Admin","email":"admin@empresa.co","role":"supremo","initials":"AD"}');
+document.getElementById('sidebarName').textContent = u.name;
+document.getElementById('sidebarEmail').textContent = u.email;
+document.getElementById('sidebarInitials').textContent = u.initials||u.name.split(' ').map(n=>n[0]).join('');
+document.getElementById('sidebarRole').textContent = u.role==='supremo'?'Supremo':'Normal';
+ 
+/* ══ CATÁLOGO INICIAL — Estrella de David ══ */
+const CATALOGO_INICIAL = [
+  // ── VELADORAS ──
+  {name:'Veladora Ref #1',       sku:'VED-REF1',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'4.2 cm x Ø 4 cm',   present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #2',       sku:'VED-REF2',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'5.1 cm x Ø 4 cm',   present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #3',       sku:'VED-REF3',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'6 cm x Ø 4 cm',     present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #4',       sku:'VED-REF4',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'7.5 cm x Ø 4 cm',   present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #5',       sku:'VED-REF5',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'6.2 cm x Ø 5 cm',   present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #6',       sku:'VED-REF6',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'8.3 cm x Ø 5 cm',   present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #7',       sku:'VED-REF7',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'10.3 cm x Ø 5 cm',  present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #7½',      sku:'VED-REF7M',  cat:'Veladora',           precio:0, stock:0, min:12, medidas:'12.5 cm x Ø 5 cm',  present:'x12 / x24 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #8',       sku:'VED-REF8',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'13.5 cm x Ø 6 cm',  present:'Pony x12 / x1', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #9',       sku:'VED-REF9',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'16.5 cm x Ø 6 cm',  present:'Pony x12 / x1', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #9½',      sku:'VED-REF9M',  cat:'Veladora',           precio:0, stock:0, min:12, medidas:'16.9 cm x Ø 7 cm',  present:'x1 und',        colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref Pony',     sku:'VED-PONY',   cat:'Veladora',           precio:0, stock:0, min:12, medidas:'9.8 cm x Ø 7 cm',   present:'x1 und',        colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #10',      sku:'VED-REF10',  cat:'Veladora',           precio:0, stock:0, min:12, medidas:'21.5 cm x Ø 7 cm',  present:'x1 und',        colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #11',      sku:'VED-REF11',  cat:'Veladora',           precio:0, stock:0, min:12, medidas:'26 cm x Ø 7 cm',    present:'x1 und',        colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #12',      sku:'VED-REF12',  cat:'Veladora',           precio:0, stock:0, min:12, medidas:'16 cm x Ø 9.7 cm',  present:'x1 und',        colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #15',      sku:'VED-REF15',  cat:'Veladora',           precio:0, stock:0, min:12, medidas:'26.9 cm x Ø 9.7 cm',present:'x1 und',        colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Veladora Ref #18',      sku:'VED-REF18',  cat:'Veladora',           precio:0, stock:0, min:12, medidas:'37.5 cm x Ø 9.7 cm',present:'x1 und',        colores:'Blanco, Surtido, Unicolor', desc:''},
+  // ── VELADORAS ESPECIALES ──
+  {name:'Veladora Especial Santa Marta',           sku:'VES-SMARTA',  cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Dominio',               sku:'VES-DOMIN',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial 7 Potencias',           sku:'VES-7POT',    cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial San Miguel',            sku:'VES-SMIG',    cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Destrancadera',         sku:'VES-DESTR',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Llama Clientes',        sku:'VES-LLCLI',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Prosperidad',           sku:'VES-PROSP',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Lluvia de Oro',         sku:'VES-LLORO',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial San Martín de Loba',    sku:'VES-SMLOBA',  cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Abrecaminos',           sku:'VES-ABREC',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Señor de los Milagros', sku:'VES-SMILAG',  cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial San Alejo',             sku:'VES-SALEJ',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial San Marcos de León',    sku:'VES-SMARCL',  cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Espíritu Santo',        sku:'VES-ESANTO',  cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Pensamiento',           sku:'VES-PENS',    cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Lluvia de Plata',       sku:'VES-LLPLAT',  cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial Justo Juez',            sku:'VES-JJUEZ',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  {name:'Veladora Especial San Pancracio',         sku:'VES-SPANC',   cat:'Veladora Especial', precio:0, stock:0, min:12, medidas:'Ref según tamaño', present:'x1 / x12 und', colores:'Multicolor', desc:''},
+  // ── PEBETERO ──
+  {name:'Pebetero Pequeño',      sku:'PEB-PEQ',    cat:'Pebetero',           precio:0, stock:0, min:22, medidas:'1.5 cm x Ø 3.7 cm', present:'x22 und',       colores:'Amarillo, Azul, Rojo, Verde, Blanco, Morado, Rosado, Naranja', desc:''},
+  {name:'Pebetero Grande',       sku:'PEB-GDE',    cat:'Pebetero',           precio:0, stock:0, min:22, medidas:'1.8 cm x Ø 4 cm',   present:'x22 und',       colores:'Amarillo, Azul, Rojo, Verde, Blanco, Morado, Rosado, Naranja', desc:''},
+  // ── VELAS LISAS ──
+  {name:'Vela Lisa L',           sku:'VLA-L',      cat:'Vela Lisa',          precio:0, stock:0, min:12, medidas:'Alto 20.5 cm',       present:'Caja x22 paq x12 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  {name:'Vela Lisa XL',          sku:'VLA-XL',     cat:'Vela Lisa',          precio:0, stock:0, min:12, medidas:'Alto 23 cm',         present:'Caja x22 paq x12 und', colores:'Blanco, Surtido, Unicolor', desc:''},
+  // ── VELAS ACANALADAS ──
+  {name:'Vela Acanalada L',      sku:'VAC-L',      cat:'Vela Acanalada',     precio:0, stock:0, min:12, medidas:'Alto 19 cm',         present:'Caja x22 paq x12 und', colores:'Solo blanco', desc:''},
+  {name:'Vela Acanalada XL',     sku:'VAC-XL',     cat:'Vela Acanalada',     precio:0, stock:0, min:12, medidas:'Alto 22 cm',         present:'Caja x22 paq x12 und', colores:'Solo blanco', desc:''},
+  // ── VELAS AROMATIZADAS ──
+  {name:'Vela Aromatizada Lavanda',    sku:'VAR-LAV',   cat:'Vela Aromatizada',   precio:0, stock:0, min:1, medidas:'1.8 cm x Ø 4 cm', present:'x1 und', colores:'Morado', desc:'En vaso de vidrio'},
+  {name:'Vela Aromatizada Palo de Rosa',sku:'VAR-ROSA', cat:'Vela Aromatizada',   precio:0, stock:0, min:1, medidas:'1.8 cm x Ø 4 cm', present:'x1 und', colores:'Blanco', desc:'En vaso de vidrio'},
+  // ── VELAS PERSONALIZADAS ──
+  {name:'Vela Personalizada (Mensajes)', sku:'VPE-MENS', cat:'Vela Personalizada', precio:0, stock:0, min:10, medidas:'Alto 13.5 cm', present:'x10 und', colores:'Blanco o surtido', desc:'Familia, Amor, Paz, Gratitud, Trabajo'},
+  {name:'Vela Navideña',                 sku:'VPE-NAV',  cat:'Vela Personalizada', precio:0, stock:0, min:10, medidas:'Alto 10 cm',   present:'x10 und', colores:'Surtido neón',     desc:'Colores neón: rosa, verde, naranja'},
+  // ── PARAFINA ──
+  {name:'Parafina Liviana 25 kg',  sku:'PAR-LIV25', cat:'Parafina', precio:0, stock:0, min:1, medidas:'Bulto 25 kg', present:'25 kg', colores:'—', desc:'Ecopetrol semirefinada'},
+  {name:'Parafina Liviana 50 kg',  sku:'PAR-LIV50', cat:'Parafina', precio:0, stock:0, min:1, medidas:'Bulto 50 kg', present:'50 kg', colores:'—', desc:'Ecopetrol semirefinada'},
+  {name:'Parafina China 25 kg',    sku:'PAR-CHI25', cat:'Parafina', precio:0, stock:0, min:1, medidas:'Bulto 25 kg', present:'25 kg', colores:'—', desc:'58° semirefinada importada'},
+  {name:'Parafina China 50 kg',    sku:'PAR-CHI50', cat:'Parafina', precio:0, stock:0, min:1, medidas:'Bulto 50 kg', present:'50 kg', colores:'—', desc:'58° semirefinada importada'},
+];
+ 
+let PRODUCTS = JSON.parse(localStorage.getItem('velas_products') || 'null') || CATALOGO_INICIAL;
+if (!localStorage.getItem('velas_products')) {
+  localStorage.setItem('velas_products', JSON.stringify(PRODUCTS));
+}
+ 
+function save() { localStorage.setItem('velas_products', JSON.stringify(PRODUCTS)); }
+ 
+function getStatus(p) {
+  if (p.stock === 0)    return 'danger';
+  if (p.stock < p.min)  return 'warning';
+  return 'success';
+}
+function statusLabel(s) { return {success:'En stock', danger:'Sin stock', warning:'Stock bajo'}[s]; }
+function badgeCls(s)    { return {success:'badge-success', danger:'badge-danger', warning:'badge-warning'}[s]; }
+function fillColor(s)   { return {success:'#4CAF50', danger:'#EF5350', warning:'#FFA726'}[s]; }
+function fmt(n)         { return n > 0 ? '$' + Number(n).toLocaleString('es-CO') : '—'; }
+ 
+let deleteIdx = -1;
+let viewIdx   = -1;
+ 
+function renderTable() {
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const cat = document.getElementById('filterCat').value;
+  const st  = document.getElementById('filterSt').value;
+  const srt = document.getElementById('filterSort').value;
+ 
+  let list = PRODUCTS.map((p, i) => ({...p, idx: i}));
+  if (q)   list = list.filter(p => p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q));
+  if (cat) list = list.filter(p => p.cat === cat);
+  if (st)  list = list.filter(p => getStatus(p) === st);
+ 
+  if (srt === 'price')  list.sort((a,b) => a.precio - b.precio);
+  else if (srt === 'stock') list.sort((a,b) => b.stock - a.stock);
+  else if (srt === 'ref')   list.sort((a,b) => a.sku.localeCompare(b.sku));
+  else list.sort((a,b) => a.name.localeCompare(b.name));
+ 
+  const tbody = document.getElementById('productsBody');
+  const empty = document.getElementById('emptyState');
+ 
+  if (!list.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display = 'none';
+ 
+  tbody.innerHTML = list.map(p => {
+    const s   = getStatus(p);
+    const max = Math.max(p.stock, p.min * 2, 1);
+    const pct = Math.min(100, Math.round((p.stock / max) * 100));
+    return `<tr>
+      <td><div style="display:flex;align-items:center">
+        <div class="product-thumb">🕯️</div>
+        <div><div class="product-name">${p.name}</div><div class="product-sku">${p.sku}</div></div>
+      </div></td>
+      <td><span class="badge badge-neutral" style="font-size:10px">${p.cat}</span></td>
+      <td style="font-size:13px">${fmt(p.precio)}</td>
+      <td><strong>${p.stock}</strong></td>
+      <td><div class="stock-bar-wrap">
+        <div class="stock-bar"><div class="stock-fill" style="width:${pct}%;background:${fillColor(s)}"></div></div>
+        <span style="font-size:11px;min-width:22px">${p.stock}</span>
+      </div></td>
+      <td><span class="badge ${badgeCls(s)}">${statusLabel(s)}</span></td>
+      <td><div class="action-btns">
+        <button class="act-btn" onclick="openVer(${p.idx})" title="Ver detalle"><i class="ti ti-eye"></i></button>
+        <button class="act-btn" onclick="openModal('editar',${p.idx})" title="Editar"><i class="ti ti-edit"></i></button>
+        <button class="act-btn del" onclick="openConfirm(${p.idx})" title="Eliminar"><i class="ti ti-trash"></i></button>
+      </div></td>
+    </tr>`;
+  }).join('');
+ 
+  // Alerta stock bajo
+  const low = PRODUCTS.filter(p => getStatus(p) !== 'success').length;
+  const alertEl = document.getElementById('alertStock');
+  if (low > 0) {
+    document.getElementById('alertStockText').textContent = low + ' producto(s) con stock bajo o sin stock.';
+    alertEl.style.display = 'flex';
+  } else {
+    alertEl.style.display = 'none';
+  }
+}
+ 
+function filterTable() { renderTable(); }
+ 
+/* ── MODAL NUEVO/EDITAR ── */
+function openModal(mode, idx) {
+  document.getElementById('formError').style.display = 'none';
+  document.getElementById('editIndex').value = idx !== undefined ? idx : -1;
+  document.getElementById('modalTitle').textContent = mode === 'editar' ? 'Editar producto' : 'Nuevo producto';
+  if (mode === 'editar') {
+    const p = PRODUCTS[idx];
+    document.getElementById('pNombre').value  = p.name;
+    document.getElementById('pSku').value     = p.sku;
+    document.getElementById('pCat').value     = p.cat;
+    document.getElementById('pPrecio').value  = p.precio;
+    document.getElementById('pStock').value   = p.stock;
+    document.getElementById('pMin').value     = p.min;
+    document.getElementById('pMedidas').value = p.medidas || '';
+    document.getElementById('pPresent').value = p.present || '';
+    document.getElementById('pColores').value = p.colores || '';
+    document.getElementById('pDesc').value    = p.desc   || '';
+  } else {
+    ['pNombre','pSku','pPrecio','pStock','pMedidas','pPresent','pColores','pDesc'].forEach(id => document.getElementById(id).value='');
+    document.getElementById('pMin').value = '10';
+    document.getElementById('pCat').value = 'Veladora';
+  }
+  document.getElementById('modalProducto').classList.add('open');
+}
+ 
+function closeModal() { document.getElementById('modalProducto').classList.remove('open'); }
+ 
+function saveProduct() {
+  const nombre = document.getElementById('pNombre').value.trim();
+  const sku    = document.getElementById('pSku').value.trim();
+  const precio = parseFloat(document.getElementById('pPrecio').value) || 0;
+  const stock  = parseInt(document.getElementById('pStock').value);
+  const ferr   = document.getElementById('formError');
+ 
+  if (!nombre || !sku || isNaN(stock)) {
+    ferr.textContent = 'Nombre, SKU y stock son obligatorios (*)';
+    ferr.style.display = 'block';
+    return;
+  }
+  ferr.style.display = 'none';
+ 
+  const obj = {
+    name:    nombre, sku: sku,
+    cat:     document.getElementById('pCat').value,
+    precio:  precio,
+    stock:   stock,
+    min:     parseInt(document.getElementById('pMin').value) || 10,
+    medidas: document.getElementById('pMedidas').value.trim(),
+    present: document.getElementById('pPresent').value.trim(),
+    colores: document.getElementById('pColores').value.trim(),
+    desc:    document.getElementById('pDesc').value.trim(),
+  };
+ 
+  const idx = parseInt(document.getElementById('editIndex').value);
+  if (idx >= 0) PRODUCTS[idx] = obj;
+  else PRODUCTS.push(obj);
+ 
+  save();
+  closeModal();
+  renderTable();
+  showSuccess(idx >= 0 ? 'Producto actualizado correctamente.' : 'Producto agregado correctamente.');
+}
+ 
+/* ── CONFIRMAR ELIMINAR ── */
+function openConfirm(idx) { deleteIdx = idx; document.getElementById('modalConfirm').classList.add('open'); }
+function closeConfirm()   { document.getElementById('modalConfirm').classList.remove('open'); }
+function confirmDelete()  {
+  PRODUCTS.splice(deleteIdx, 1);
+  save();
+  closeConfirm();
+  renderTable();
+  showSuccess('Producto eliminado del catálogo.');
+}
+ 
+/* ── VER DETALLE ── */
+function openVer(idx) {
+  viewIdx = idx;
+  const p = PRODUCTS[idx];
+  const s = getStatus(p);
+  document.getElementById('detailGrid').innerHTML = `
+    <div class="detail-item"><div class="lbl">Nombre</div><div class="val">${p.name}</div></div>
+    <div class="detail-item"><div class="lbl">SKU / Ref</div><div class="val">${p.sku}</div></div>
+    <div class="detail-item"><div class="lbl">Categoría</div><div class="val">${p.cat}</div></div>
+    <div class="detail-item"><div class="lbl">Precio</div><div class="val">${fmt(p.precio)}</div></div>
+    <div class="detail-item"><div class="lbl">Stock actual</div><div class="val"><span class="badge ${badgeCls(s)}">${p.stock} uds</span></div></div>
+    <div class="detail-item"><div class="lbl">Stock mínimo</div><div class="val">${p.min} uds</div></div>
+    ${p.medidas ? '<div class="detail-item"><div class="lbl">Medidas</div><div class="val">'+p.medidas+'</div></div>' : ''}
+    ${p.present ? '<div class="detail-item"><div class="lbl">Presentación</div><div class="val">'+p.present+'</div></div>' : ''}
+    ${p.colores ? '<div class="detail-item" style="grid-column:1/-1"><div class="lbl">Colores</div><div class="val">'+p.colores+'</div></div>' : ''}
+    ${p.desc    ? '<div class="detail-item" style="grid-column:1/-1"><div class="lbl">Descripción</div><div class="val">'+p.desc+'</div></div>' : ''}
+  `;
+  document.getElementById('modalVer').classList.add('open');
+}
+function closeVer()       { document.getElementById('modalVer').classList.remove('open'); }
+function editFromDetail() { closeVer(); openModal('editar', viewIdx); }
+ 
+/* ── EXPORT ── */
+function exportCSV() {
+  const rows = [['Nombre','SKU','Categoría','Precio','Stock','Min','Medidas','Presentación','Colores']];
+  PRODUCTS.forEach(p => rows.push([p.name, p.sku, p.cat, p.precio, p.stock, p.min, p.medidas||'', p.present||'', p.colores||'']));
+  const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+  a.download = 'productos_estrella_david.csv';
+  a.click();
+}
+ 
+/* ── UTIL ── */
+function showSuccess(msg) {
+  document.getElementById('successText').textContent = msg;
+  const el = document.getElementById('successMsg');
+  el.style.display = 'flex';
+  setTimeout(() => el.style.display = 'none', 3500);
+}
+ 
+['modalProducto','modalConfirm','modalVer'].forEach(id => {
+  document.getElementById(id).addEventListener('click', e => { if(e.target.id===id) document.getElementById(id).classList.remove('open'); });
+});
+ 
+renderTable();
+</script>
+</body>
+</html>
