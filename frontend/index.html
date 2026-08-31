@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Iniciar sesión — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="login-page">
+<div class="login-wrap">
+  <div class="login-card">
+ 
+ <div class="login-logo" style="height:auto;padding:10px;background:transparent;border:none;">
+  <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:180px;object-fit:contain;">
+</div>
+ 
+    <div class="login-title">Bienvenido</div>
+    <div class="login-sub">Accede al panel de administración</div>
+ 
+    <div class="login-error" id="loginError">
+      <i class="ti ti-alert-circle"></i> DNI o contraseña incorrectos.
+    </div>
+    <div class="blocked-msg" id="blockedMsg">
+      <i class="ti ti-lock"></i> Cuenta bloqueada por 3 intentos fallidos. Contacta al administrador supremo.
+    </div>
+ 
+    <div class="form-group">
+      <label class="form-label">DNI</label>
+      <input type="text" class="form-input" id="email" placeholder="Número de documento" autocomplete="username" inputmode="numeric">
+    </div>
+ 
+    <div class="form-group">
+      <label class="form-label">Contraseña</label>
+      <div style="position:relative">
+        <input type="password" class="form-input" id="password" placeholder="••••••••" autocomplete="current-password" style="padding-right:42px">
+        <button onclick="togglePwd()" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-dim)" id="eyeBtn" aria-label="Mostrar contraseña">
+          <i class="ti ti-eye" id="eyeIcon"></i>
+        </button>
+      </div>
+      <div class="attempts-left" id="attemptsLeft"></div>
+    </div>
+ 
+    <a href="#" class="login-forgot">¿Olvidaste tu contraseña?</a>
+ 
+    <button class="btn-primary" style="width:100%;justify-content:center;padding:10px" onclick="doLogin()">
+      <i class="ti ti-login"></i> Iniciar sesión
+    </button>
+ 
+    <div style="text-align:center;margin-top:18px;font-size:12px;color:var(--text-dim)">
+      Panel exclusivo para administradores
+    </div>
+  </div>
+</div>
+ 
+<script>
+  /* Credenciales demo — reemplaza email por DNI real */
+  const USERS = [
+    { email:'1234567890', pwd:'admin123',  role:'supremo', name:'Ana Suárez',  initials:'AS' },
+    { email:'0987654321', pwd:'carlos123', role:'normal',  name:'Carlos Mora', initials:'CM' },
+  ];
+ 
+  let attempts = parseInt(sessionStorage.getItem('loginAttempts') || '0');
+  const MAX = 3;
+ 
+  function updateAttempts() {
+    const left = MAX - attempts;
+    const el = document.getElementById('attemptsLeft');
+    el.textContent = attempts > 0 ? `Intentos restantes: ${left}` : '';
+  }
+ 
+  function togglePwd() {
+    const inp = document.getElementById('password');
+    const ico = document.getElementById('eyeIcon');
+    if (inp.type === 'password') { inp.type = 'text';     ico.className = 'ti ti-eye-off'; }
+    else                          { inp.type = 'password'; ico.className = 'ti ti-eye';     }
+  }
+ 
+  function doLogin() {
+    if (attempts >= MAX) {
+      document.getElementById('blockedMsg').style.display = 'flex';
+      document.getElementById('loginError').style.display = 'none';
+      return;
+    }
+    const email = document.getElementById('email').value.trim();
+    const pwd   = document.getElementById('password').value;
+    const user  = USERS.find(u => u.email === email && u.pwd === pwd);
+ 
+    if (user) {
+      sessionStorage.setItem('loginAttempts', '0');
+      sessionStorage.setItem('user', JSON.stringify(user));
+      window.location.href = 'dashboard.html';
+    } else {
+      attempts++;
+      sessionStorage.setItem('loginAttempts', attempts);
+      if (attempts >= MAX) {
+        document.getElementById('blockedMsg').style.display = 'flex';
+        document.getElementById('loginError').style.display = 'none';
+      } else {
+        document.getElementById('loginError').style.display = 'flex';
+      }
+      updateAttempts();
+    }
+  }
+ 
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  updateAttempts();
+</script>
+</body>
+</html>
+ 

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+    </div>
+    <div class="brand-name">Estrella de David</div>
+    <div class="brand-sub">Fábrica de veladoras</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Dashboard</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" placeholder="Buscar…"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html" title="Notificaciones"><i class="ti ti-bell"></i><span class="notif-dot"></span></a>
+      <a class="icon-btn" href="usuarios.html" title="Configuración"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Ventas del mes</div>
+        <div class="metric-value">$4,820</div>
+        <div class="metric-sub"><i class="ti ti-trending-up delta-up" style="font-size:12px"></i><span class="delta-up">+12% vs mes anterior</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Unidades vendidas</div>
+        <div class="metric-value">318</div>
+        <div class="metric-sub"><i class="ti ti-trending-up delta-up" style="font-size:12px"></i><span class="delta-up">+8% vs mes anterior</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Productos activos</div>
+        <div class="metric-value">42</div>
+        <div class="metric-sub"><i class="ti ti-alert-triangle" style="font-size:12px;color:var(--warning)"></i><span style="color:var(--warning)">3 con bajo stock</span></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Ingresos totales</div>
+        <div class="metric-value">$28.4k</div>
+        <div class="metric-sub"><i class="ti ti-trending-up delta-up" style="font-size:12px"></i><span class="delta-up">+5% vs año anterior</span></div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="card-header">
+          <div><div class="card-title">Ventas mensuales</div><div class="card-sub">Ingresos acumulados 2026</div></div>
+          <div class="period-pills">
+            <button class="pill active">6M</button>
+            <button class="pill" onclick="this.parentElement.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));this.classList.add('active')">1A</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="salesChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header"><div><div class="card-title">Categorías</div><div class="card-sub">Distribución por tipo</div></div></div>
+        <div class="donut-wrap"><canvas id="catChart"></canvas></div>
+        <div class="legend-list">
+          <div class="legend-item"><span class="legend-dot"><span class="dot" style="background:#D4AF37"></span>Aromaterapia</span><span class="legend-pct">38%</span></div>
+          <div class="legend-item"><span class="legend-dot"><span class="dot" style="background:#3A86FF"></span>Decorativas</span><span class="legend-pct">25%</span></div>
+          <div class="legend-item"><span class="legend-dot"><span class="dot" style="background:#E0E0E0"></span>Soy Candles</span><span class="legend-pct">22%</span></div>
+          <div class="legend-item"><span class="legend-dot"><span class="dot" style="background:#16213E;border:0.5px solid #3A86FF"></span>Premium</span><span class="legend-pct">15%</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Productos más vendidos</div>
+      <a class="btn-outline" href="productos.html"><i class="ti ti-arrow-right"></i> Ver todos</a>
+    </div>
+    <div class="table-card">
+      <table>
+        <colgroup><col style="width:36%"><col style="width:16%"><col style="width:14%"><col style="width:16%"><col style="width:18%"></colgroup>
+        <thead><tr><th>Producto</th><th>Categoría</th><th>Unidades</th><th>Ingresos</th><th>Tendencia</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><div style="display:flex;align-items:center"><div class="product-thumb">🕯️</div><div><div class="product-name">Vela Lavanda &amp; Vainilla</div><div class="product-sku">VLV-001</div></div></div></td>
+            <td><span class="badge badge-neutral">Aromaterapia</span></td><td>84</td><td>$756,000</td>
+            <td><span class="badge badge-success"><i class="ti ti-trending-up" style="font-size:11px"></i> +24%</span></td>
+          </tr>
+          <tr>
+            <td><div style="display:flex;align-items:center"><div class="product-thumb">🕯️</div><div><div class="product-name">Vela Coco &amp; Sándalo</div><div class="product-sku">VCS-002</div></div></div></td>
+            <td><span class="badge badge-neutral">Premium</span></td><td>61</td><td>$915,000</td>
+            <td><span class="badge badge-success"><i class="ti ti-trending-up" style="font-size:11px"></i> +18%</span></td>
+          </tr>
+          <tr>
+            <td><div style="display:flex;align-items:center"><div class="product-thumb">🕯️</div><div><div class="product-name">Vela Eucalipto Natural</div><div class="product-sku">VEN-003</div></div></div></td>
+            <td><span class="badge badge-neutral">Soy Candles</span></td><td>53</td><td>$477,000</td>
+            <td><span class="badge badge-warning"><i class="ti ti-minus" style="font-size:11px"></i> +2%</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:22px">
+      <div class="chart-card">
+        <div class="card-header"><div><div class="card-title">Alertas de stock</div><div class="card-sub">Productos bajo mínimo</div></div><a href="stock.html" class="btn-outline" style="font-size:12px;padding:5px 10px">Ver stock</a></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--gold-pale);border:0.5px solid var(--border);border-radius:8px">
+            <span style="font-size:13px">🕯️ Vela Lavanda &amp; Vainilla</span>
+            <span class="badge badge-danger">8 uds</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--gold-pale);border:0.5px solid var(--border);border-radius:8px">
+            <span style="font-size:13px">🕯️ Vela Rosa Musgo</span>
+            <span class="badge badge-danger">5 uds</span>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:var(--gold-pale);border:0.5px solid var(--border);border-radius:8px">
+            <span style="font-size:13px">🕯️ Vela Canela &amp; Naranja</span>
+            <span class="badge badge-warning">9 uds</span>
+          </div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header"><div><div class="card-title">Última actividad</div><div class="card-sub">Acciones recientes</div></div><a href="auditoria.html" class="btn-outline" style="font-size:12px;padding:5px 10px">Ver todo</a></div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span class="badge badge-gold" style="flex-shrink:0;margin-top:2px">Ana S.</span>
+            <div><div style="font-size:13px">Registró venta #V-0142</div><div style="font-size:11px;color:var(--text-dim)">Hace 2 horas</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span class="badge badge-blue" style="flex-shrink:0;margin-top:2px">Carlos M.</span>
+            <div><div style="font-size:13px">Registró venta #V-0141</div><div style="font-size:11px;color:var(--text-dim)">Hace 5 horas</div></div>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start">
+            <span class="badge badge-gold" style="flex-shrink:0;margin-top:2px">Ana S.</span>
+            <div><div style="font-size:13px">Editó producto VCS-002</div><div style="font-size:11px;color:var(--text-dim)">Ayer, 09:05</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+  // Mark active nav
+  document.querySelectorAll('.nav-item').forEach(a => {
+    if (a.getAttribute('href') === 'dashboard.html') a.classList.add('active');
+  });
+  // Load user
+  const u = JSON.parse(sessionStorage.getItem('user') || '{"name":"Ana Suárez","email":"admin@empresa.co","role":"supremo","initials":"AS"}');
+  document.getElementById('sidebarName').textContent = u.name;
+  document.getElementById('sidebarEmail').textContent = u.email;
+  document.getElementById('sidebarInitials').textContent = u.initials || u.name.split(' ').map(n=>n[0]).join('');
+  document.getElementById('sidebarRole').textContent = u.role === 'supremo' ? 'Supremo' : 'Normal';
+
+  const months = ['Ene','Feb','Mar','Abr','May','Jun'];
+  const gridCol = 'rgba(212,175,55,0.08)';
+  const tickCol = '#6B7585';
+
+  new Chart(document.getElementById('salesChart'), {
+    type: 'bar',
+    data: { labels: months, datasets: [{ data: [3200,2800,3900,4100,3600,4820],
+      backgroundColor: months.map((_,i) => i===5 ? '#D4AF37' : 'rgba(212,175,55,0.25)'),
+      borderColor: months.map((_,i) => i===5 ? '#B8941F' : 'rgba(212,175,55,0.5)'),
+      borderWidth: 1, borderRadius: 4 }] },
+    options: { responsive:true, maintainAspectRatio:false,
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label: v => ' $'+v.raw.toLocaleString()}} },
+      scales: { x:{grid:{display:false},ticks:{color:tickCol,font:{size:11}}},
+                y:{grid:{color:gridCol},ticks:{color:tickCol,font:{size:11},callback: v => '$'+(v/1000).toFixed(0)+'k'}} } }
+  });
+
+  new Chart(document.getElementById('catChart'), {
+    type: 'doughnut',
+    data: { labels:['Aromaterapia','Decorativas','Soy Candles','Premium'],
+      datasets:[{data:[38,25,22,15], backgroundColor:['#D4AF37','#3A86FF','#E0E0E0','#16213E'], borderWidth:0}] },
+    options: { responsive:true, maintainAspectRatio:false, cutout:'70%', plugins:{legend:{display:false}} }
+  });
+</script>
+</body>
+</html>

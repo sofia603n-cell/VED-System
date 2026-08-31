@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ventas — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+    </div>
+    <div class="brand-name">Tu Empresa</div>
+    <div class="brand-sub">Panel de velas</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Registro de ventas</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" id="searchInput" placeholder="Buscar venta…" oninput="renderVentas()"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html"><i class="ti ti-bell"></i><span class="notif-dot"></span></a>
+      <a class="icon-btn" href="usuarios.html"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+
+    <div id="successMsg" class="alert-success" style="display:none"><i class="ti ti-check"></i><span id="successText"></span></div>
+
+    <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:24px;align-items:start">
+
+      <!-- FORMULARIO NUEVA VENTA -->
+      <div>
+        <div class="section-header"><div class="section-title">Nueva venta</div></div>
+        <div class="form-card">
+          <div class="form-group">
+            <label class="form-label">Producto *</label>
+            <select class="form-input" id="vProducto" style="width:100%" onchange="onProductChange()">
+              <option value="">— Selecciona un producto —</option>
+            </select>
+          </div>
+
+          <div id="prodInfo" style="display:none;background:var(--gold-pale);border:0.5px solid var(--border);border-radius:8px;padding:12px;margin-bottom:14px">
+            <div style="display:flex;justify-content:space-between">
+              <div><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">Precio</div><div style="font-size:18px;color:var(--gold)" id="vPrecioInfo">—</div></div>
+              <div><div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">Stock disponible</div><div style="font-size:18px;color:var(--white)" id="vStockInfo">—</div></div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Cantidad *</label>
+              <input type="number" class="form-input" id="vCantidad" placeholder="1" min="1" oninput="calcTotal()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Precio unitario ($) *</label>
+              <input type="number" class="form-input" id="vPrecio" placeholder="0" min="0" oninput="calcTotal()">
+            </div>
+          </div>
+
+          <div style="background:rgba(212,175,55,0.1);border:0.5px solid var(--border-med);border-radius:8px;padding:14px;margin-bottom:16px;text-align:center">
+            <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.09em">Total calculado</div>
+            <div style="font-size:28px;font-family:'Playfair Display',serif;color:var(--gold);margin-top:4px" id="vTotal">$0</div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Fecha *</label>
+            <input type="date" class="form-input" id="vFecha" style="width:100%">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Canal de venta</label>
+            <select class="form-input" id="vCanal" style="width:100%">
+              <option>Venta directa</option><option>WhatsApp</option>
+              <option>Instagram</option><option>Mercado Libre</option><option>Página web</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observaciones</label>
+            <textarea class="form-input" id="vObs" rows="2" placeholder="Notas de la venta…" style="resize:vertical"></textarea>
+          </div>
+          <div id="vError" style="color:var(--danger);font-size:12px;margin-bottom:8px;display:none"></div>
+          <div class="form-actions">
+            <button class="btn-outline" onclick="clearVenta()"><i class="ti ti-x"></i> Limpiar</button>
+            <button class="btn-primary" onclick="saveVenta()"><i class="ti ti-shopping-bag"></i> Registrar venta</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORIAL -->
+      <div>
+        <div class="section-header">
+          <div class="section-title">Historial de ventas</div>
+          <div style="display:flex;gap:8px">
+            <input type="date" id="fDesde" style="width:140px" onchange="renderVentas()">
+            <input type="date" id="fHasta" style="width:140px" onchange="renderVentas()">
+            <button class="btn-outline" onclick="exportCSV()"><i class="ti ti-download"></i></button>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+          <div class="metric-card" style="padding:12px 14px">
+            <div class="metric-label">Ventas (período)</div>
+            <div class="metric-value" style="font-size:20px" id="mCount">—</div>
+          </div>
+          <div class="metric-card" style="padding:12px 14px">
+            <div class="metric-label">Total ingresos</div>
+            <div class="metric-value" style="font-size:20px;color:var(--gold)" id="mTotal">—</div>
+          </div>
+        </div>
+
+        <div class="table-card">
+          <table>
+            <colgroup><col style="width:10%"><col style="width:30%"><col style="width:10%"><col style="width:13%"><col style="width:13%"><col style="width:14%"><col style="width:10%"></colgroup>
+            <thead><tr><th>ID</th><th>Producto</th><th>Cant.</th><th>Precio</th><th>Total</th><th>Fecha</th><th>Por</th></tr></thead>
+            <tbody id="ventasBody"></tbody>
+          </table>
+          <div id="ventasEmpty" class="empty-state"><i class="ti ti-shopping-bag"></i>No hay ventas registradas aún.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL DETALLE VENTA -->
+<div class="modal-overlay" id="modalVer">
+  <div class="modal">
+    <div class="modal-title">Detalle de venta</div>
+    <div class="detail-grid" id="ventaDetail"></div>
+    <div class="modal-actions">
+      <button class="btn-outline" onclick="document.getElementById('modalVer').classList.remove('open')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRMAR ELIMINAR VENTA -->
+<div class="modal-overlay" id="modalDel">
+  <div class="confirm-modal">
+    <div class="icon">🗑️</div>
+    <h3>¿Anular esta venta?</h3>
+    <p>El stock del producto se restaurará. Esta acción queda registrada en auditoría.</p>
+    <div class="btns">
+      <button class="btn-outline" onclick="document.getElementById('modalDel').classList.remove('open')">Cancelar</button>
+      <button class="btn-danger" onclick="confirmDel()"><i class="ti ti-trash"></i> Anular venta</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('.nav-item').forEach(a=>{if(a.getAttribute('href')==='ventas.html')a.classList.add('active');});
+const u=JSON.parse(sessionStorage.getItem('user')||'{"name":"Ana Suárez","email":"admin@empresa.co","role":"supremo","initials":"AS"}');
+document.getElementById('sidebarName').textContent=u.name;
+document.getElementById('sidebarEmail').textContent=u.email;
+document.getElementById('sidebarInitials').textContent=u.initials||u.name.split(' ').map(n=>n[0]).join('');
+document.getElementById('sidebarRole').textContent=u.role==='supremo'?'Supremo':'Normal';
+
+document.getElementById('vFecha').value=new Date().toISOString().split('T')[0];
+
+function getProds(){return JSON.parse(localStorage.getItem('velas_products')||'[]');}
+function getVentas(){return JSON.parse(localStorage.getItem('velas_ventas')||'[]');}
+function saveVentas(v){localStorage.setItem('velas_ventas',JSON.stringify(v));}
+function fmt(n){return'$'+Number(n).toLocaleString('es-CO');}
+
+let nextId = parseInt(localStorage.getItem('velas_ventaId')||'142');
+
+function loadProductSelect(){
+  const sel=document.getElementById('vProducto');
+  const prods=getProds();
+  sel.innerHTML='<option value="">— Selecciona un producto —</option>';
+  prods.forEach((p,i)=>{
+    const opt=document.createElement('option');
+    opt.value=i;
+    opt.textContent=p.name+' (Stock: '+p.stock+')';
+    opt.disabled=p.stock===0;
+    sel.appendChild(opt);
+  });
+}
+
+function onProductChange(){
+  const idx=document.getElementById('vProducto').value;
+  const prods=getProds();
+  const info=document.getElementById('prodInfo');
+  if(idx===''){info.style.display='none';return;}
+  const p=prods[idx];
+  document.getElementById('vPrecioInfo').textContent=fmt(p.precio);
+  document.getElementById('vStockInfo').textContent=p.stock+' uds';
+  document.getElementById('vPrecio').value=p.precio;
+  info.style.display='block';
+  calcTotal();
+}
+
+function calcTotal(){
+  const qty=parseInt(document.getElementById('vCantidad').value)||0;
+  const prc=parseFloat(document.getElementById('vPrecio').value)||0;
+  document.getElementById('vTotal').textContent=fmt(qty*prc);
+}
+
+function saveVenta(){
+  const idx=document.getElementById('vProducto').value;
+  const qty=parseInt(document.getElementById('vCantidad').value);
+  const prc=parseFloat(document.getElementById('vPrecio').value);
+  const ferr=document.getElementById('vError');
+  const prods=getProds();
+
+  if(idx===''){ferr.textContent='Selecciona un producto.';ferr.style.display='block';return;}
+  if(!qty||qty<=0){ferr.textContent='Ingresa una cantidad válida.';ferr.style.display='block';return;}
+  if(!prc||prc<=0){ferr.textContent='Ingresa un precio válido.';ferr.style.display='block';return;}
+  if(prods[idx].stock<qty){ferr.textContent='Stock insuficiente. Disponible: '+prods[idx].stock+' uds.';ferr.style.display='block';return;}
+  ferr.style.display='none';
+
+  prods[idx].stock-=qty;
+  localStorage.setItem('velas_products',JSON.stringify(prods));
+
+  const ventas=getVentas();
+  ventas.unshift({
+    id:'V-'+String(nextId++).padStart(4,'0'),
+    producto:prods[idx].name,sku:prods[idx].sku,prodIdx:parseInt(idx),
+    cantidad:qty,precio:prc,total:qty*prc,
+    fecha:document.getElementById('vFecha').value,
+    canal:document.getElementById('vCanal').value,
+    obs:document.getElementById('vObs').value.trim(),
+    por:u.name,ts:Date.now()
+  });
+  saveVentas(ventas);
+  localStorage.setItem('velas_ventaId',nextId);
+
+  clearVenta();
+  loadProductSelect();
+  renderVentas();
+  showSuccess('Venta registrada correctamente. Stock actualizado.');
+}
+
+function clearVenta(){
+  ['vProducto','vCantidad','vPrecio','vObs'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('vFecha').value=new Date().toISOString().split('T')[0];
+  document.getElementById('vCanal').value='Venta directa';
+  document.getElementById('vTotal').textContent='$0';
+  document.getElementById('prodInfo').style.display='none';
+  document.getElementById('vError').style.display='none';
+}
+
+let delIdx=-1;
+function renderVentas(){
+  const q=document.getElementById('searchInput').value.toLowerCase();
+  const desde=document.getElementById('fDesde').value;
+  const hasta=document.getElementById('fHasta').value;
+  let list=getVentas().map((v,i)=>({...v,idx:i}));
+  if(q) list=list.filter(v=>v.producto.toLowerCase().includes(q)||v.id.toLowerCase().includes(q));
+  if(desde) list=list.filter(v=>v.fecha>=desde);
+  if(hasta) list=list.filter(v=>v.fecha<=hasta);
+
+  const count=list.length;
+  const total=list.reduce((s,v)=>s+v.total,0);
+  document.getElementById('mCount').textContent=count+' ventas';
+  document.getElementById('mTotal').textContent=fmt(total);
+
+  const tbody=document.getElementById('ventasBody');
+  const empty=document.getElementById('ventasEmpty');
+  if(!list.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=list.slice(0,30).map(v=>`<tr>
+    <td style="font-size:11px;color:var(--text-dim)">#${v.id}</td>
+    <td><div class="product-name">${v.producto}</div></td>
+    <td>${v.cantidad}</td>
+    <td style="font-size:12px">${fmt(v.precio)}</td>
+    <td><strong style="color:var(--gold)">${fmt(v.total)}</strong></td>
+    <td style="font-size:11px;color:var(--text-dim)">${v.fecha}</td>
+    <td><div class="action-btns">
+      <button class="act-btn" onclick="verVenta(${v.idx})" title="Ver detalle"><i class="ti ti-eye"></i></button>
+      <button class="act-btn del" onclick="openDel(${v.idx})" title="Anular"><i class="ti ti-trash"></i></button>
+    </div></td>
+  </tr>`).join('');
+}
+
+function verVenta(idx){
+  const v=getVentas()[idx];
+  document.getElementById('ventaDetail').innerHTML=`
+    <div class="detail-item"><div class="lbl">ID Venta</div><div class="val">#${v.id}</div></div>
+    <div class="detail-item"><div class="lbl">Producto</div><div class="val">${v.producto}</div></div>
+    <div class="detail-item"><div class="lbl">Cantidad</div><div class="val">${v.cantidad} uds</div></div>
+    <div class="detail-item"><div class="lbl">Precio unit.</div><div class="val">${fmt(v.precio)}</div></div>
+    <div class="detail-item"><div class="lbl">Total</div><div class="val" style="color:var(--gold)">${fmt(v.total)}</div></div>
+    <div class="detail-item"><div class="lbl">Fecha</div><div class="val">${v.fecha}</div></div>
+    <div class="detail-item"><div class="lbl">Canal</div><div class="val">${v.canal||'—'}</div></div>
+    <div class="detail-item"><div class="lbl">Registrado por</div><div class="val">${v.por}</div></div>
+    ${v.obs?'<div class="detail-item" style="grid-column:1/-1"><div class="lbl">Observaciones</div><div class="val">'+v.obs+'</div></div>':''}
+  `;
+  document.getElementById('modalVer').classList.add('open');
+}
+
+function openDel(idx){delIdx=idx;document.getElementById('modalDel').classList.add('open');}
+function confirmDel(){
+  const ventas=getVentas();
+  const v=ventas[delIdx];
+  const prods=getProds();
+  if(v.prodIdx!==undefined&&prods[v.prodIdx]){prods[v.prodIdx].stock+=v.cantidad;localStorage.setItem('velas_products',JSON.stringify(prods));}
+  ventas.splice(delIdx,1);
+  saveVentas(ventas);
+  loadProductSelect();
+  renderVentas();
+  document.getElementById('modalDel').classList.remove('open');
+  showSuccess('Venta anulada y stock restaurado correctamente.');
+}
+
+function exportCSV(){
+  const rows=[['ID','Producto','SKU','Cantidad','Precio','Total','Fecha','Canal','Por']];
+  getVentas().forEach(v=>rows.push([v.id,v.producto,v.sku||'',v.cantidad,v.precio,v.total,v.fecha,v.canal||'',v.por]));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='ventas_velas.csv';a.click();
+}
+
+function showSuccess(msg){
+  document.getElementById('successText').textContent=msg;
+  const el=document.getElementById('successMsg');el.style.display='flex';
+  setTimeout(()=>el.style.display='none',3500);
+}
+
+['modalVer','modalDel'].forEach(id=>{document.getElementById(id).addEventListener('click',e=>{if(e.target.id===id)document.getElementById(id).classList.remove('open');});});
+
+loadProductSelect();
+renderVentas();
+</script>
+</body>
+</html>

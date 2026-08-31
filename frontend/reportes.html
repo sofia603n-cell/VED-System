@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reportes — Panel de velas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/dist/tabler-icons.min.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-logo">
+     <div class="logo-img-wrap" style="background:transparent;border:none;padding:4px;">
+      <img src="img/logo.jpeg" alt="Estrella de David" style="max-width:100%;max-height:56px;object-fit:contain;">
+    </div>
+    <div class="brand-name">Tu Empresa</div>
+    <div class="brand-sub">Panel de velas</div>
+  </div>
+  <div class="sidebar-user" id="sidebarUser">
+    <div class="user-avatar" id="sidebarInitials">AS</div>
+    <div class="user-info">
+      <div class="user-name" id="sidebarName">Ana Suárez</div>
+      <div class="user-role" id="sidebarEmail">admin@empresa.co</div>
+    </div>
+    <span class="role-badge" id="sidebarRole">Supremo</span>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">General</div>
+    <a class="nav-item" href="dashboard.html"><i class="ti ti-layout-dashboard"></i> Dashboard</a>
+    <div class="nav-section-label">Inventario</div>
+    <a class="nav-item" href="productos.html"><i class="ti ti-candle"></i> Productos</a>
+    <a class="nav-item" href="stock.html"><i class="ti ti-package"></i> Stock <span class="nav-badge">3</span></a>
+    <a class="nav-item" href="entradas.html"><i class="ti ti-arrow-bar-to-down"></i> Entradas</a>
+    <div class="nav-section-label">Ventas</div>
+    <a class="nav-item" href="ventas.html"><i class="ti ti-shopping-bag"></i> Ventas</a>
+    <a class="nav-item" href="reportes.html"><i class="ti ti-chart-bar"></i> Reportes</a>
+    <div class="nav-section-label">Sistema</div>
+    <a class="nav-item" href="usuarios.html"><i class="ti ti-users"></i> Usuarios</a>
+    <a class="nav-item" href="auditoria.html"><i class="ti ti-clipboard-list"></i> Auditoría</a>
+  </nav>
+  <div class="sidebar-footer">
+    <a class="logout-btn" href="index.html" onclick="sessionStorage.clear()"><i class="ti ti-logout"></i> Cerrar sesión</a>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-title">Reportes</div>
+    <div class="search-bar"><i class="ti ti-search"></i><input type="text" placeholder="Buscar…"></div>
+    <div class="topbar-actions">
+      <a class="icon-btn" href="auditoria.html"><i class="ti ti-bell"></i><span class="notif-dot"></span></a>
+      <a class="icon-btn" href="usuarios.html"><i class="ti ti-settings"></i></a>
+    </div>
+  </header>
+  <div class="content">
+
+    <!-- FILTROS -->
+    <div class="filters-row" style="margin-bottom:20px">
+      <label style="font-size:12px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.07em">Período:</label>
+      <input type="date" id="rDesde" style="width:145px" onchange="refreshAll()">
+      <span style="color:var(--text-dim);font-size:13px">a</span>
+      <input type="date" id="rHasta" style="width:145px" onchange="refreshAll()">
+      <button class="pill active" onclick="setPeriod(7,this)">7 días</button>
+      <button class="pill" onclick="setPeriod(30,this)">30 días</button>
+      <button class="pill" onclick="setPeriod(90,this)">90 días</button>
+      <button class="btn-outline" onclick="window.print()"><i class="ti ti-printer"></i> Imprimir</button>
+    </div>
+
+    <!-- KPI METRICS -->
+    <div class="metrics-grid" style="margin-bottom:20px">
+      <div class="metric-card">
+        <div class="metric-label">Total ventas</div>
+        <div class="metric-value" id="kpiVentas">—</div>
+        <div class="metric-sub" id="kpiVentasSub"></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Ingresos</div>
+        <div class="metric-value" id="kpiIngresos" style="color:var(--gold)">—</div>
+        <div class="metric-sub" id="kpiIngresosSub"></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Unidades vendidas</div>
+        <div class="metric-value" id="kpiUnidades">—</div>
+        <div class="metric-sub" id="kpiUnidadesSub"></div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Ticket promedio</div>
+        <div class="metric-value" id="kpiTicket">—</div>
+        <div class="metric-sub"><i class="ti ti-chart-line" style="font-size:12px"></i> por venta</div>
+      </div>
+    </div>
+
+    <!-- GRÁFICAS FILA 1 -->
+    <div class="reports-grid">
+      <div class="chart-card">
+        <div class="card-header"><div><div class="card-title">Ingresos por día</div><div class="card-sub">Evolución de ventas en el período</div></div></div>
+        <div class="chart-wrap"><canvas id="chartDiario"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header"><div><div class="card-title">Ventas por categoría</div><div class="card-sub">Distribución de ingresos</div></div></div>
+        <div style="position:relative;height:210px"><canvas id="chartCat"></canvas></div>
+      </div>
+    </div>
+
+    <!-- GRÁFICAS FILA 2 -->
+    <div class="reports-grid">
+      <div class="chart-card">
+        <div class="card-header"><div><div class="card-title">Top productos</div><div class="card-sub">Por unidades vendidas</div></div></div>
+        <div style="position:relative;height:210px"><canvas id="chartTop"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="card-header"><div><div class="card-title">Canal de venta</div><div class="card-sub">Distribución por canal</div></div></div>
+        <div style="position:relative;height:210px"><canvas id="chartCanal"></canvas></div>
+      </div>
+    </div>
+
+    <!-- TABLA RESUMEN -->
+    <div class="section-header" style="margin-top:4px">
+      <div class="section-title">Detalle de ventas del período</div>
+      <button class="btn-outline" onclick="exportCSV()"><i class="ti ti-download"></i> Exportar CSV</button>
+    </div>
+    <div class="table-card">
+      <table>
+        <colgroup><col style="width:10%"><col style="width:30%"><col style="width:11%"><col style="width:13%"><col style="width:13%"><col style="width:13%"><col style="width:10%"></colgroup>
+        <thead><tr><th>ID</th><th>Producto</th><th>Cant.</th><th>Precio</th><th>Total</th><th>Fecha</th><th>Canal</th></tr></thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+      <div id="reportEmpty" class="empty-state"><i class="ti ti-chart-bar"></i>No hay ventas en el período seleccionado.</div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+document.querySelectorAll('.nav-item').forEach(a=>{if(a.getAttribute('href')==='reportes.html')a.classList.add('active');});
+const u=JSON.parse(sessionStorage.getItem('user')||'{"name":"Ana Suárez","email":"admin@empresa.co","role":"supremo","initials":"AS"}');
+document.getElementById('sidebarName').textContent=u.name;
+document.getElementById('sidebarEmail').textContent=u.email;
+document.getElementById('sidebarInitials').textContent=u.initials||u.name.split(' ').map(n=>n[0]).join('');
+document.getElementById('sidebarRole').textContent=u.role==='supremo'?'Supremo':'Normal';
+
+const gridCol='rgba(212,175,55,0.08)';const tickCol='#6B7585';
+const COLORS=['#D4AF37','#3A86FF','#E0E0E0','#4CAF50','#FFA726','#EF5350'];
+let charts={};
+
+function fmt(n){return'$'+Number(n).toLocaleString('es-CO');}
+
+function getVentas(){
+  const stored=JSON.parse(localStorage.getItem('velas_ventas')||'[]');
+  if(stored.length) return stored;
+  // Demo data if no real sales yet
+  const demos=[];
+  const prods=['Vela Lavanda & Vainilla','Vela Coco & Sándalo','Vela Eucalipto Natural','Vela Rosa Musgo','Vela Canela & Naranja'];
+  const cats= ['Aromaterapia','Premium','Soy Candles','Decorativas','Aromaterapia'];
+  const prices=[9000,15000,9000,12000,8500];
+  const canales=['Venta directa','WhatsApp','Instagram','Mercado Libre','Página web'];
+  for(let i=0;i<30;i++){
+    const d=new Date(); d.setDate(d.getDate()-Math.floor(Math.random()*60));
+    const pi=Math.floor(Math.random()*5);
+    const qty=Math.floor(Math.random()*5)+1;
+    demos.push({
+      id:'V-'+String(100+i).padStart(4,'0'),
+      producto:prods[pi],cat:cats[pi],cantidad:qty,precio:prices[pi],total:qty*prices[pi],
+      fecha:d.toISOString().split('T')[0],
+      canal:canales[Math.floor(Math.random()*canales.length)],por:'Ana S.'
+    });
+  }
+  return demos;
+}
+
+function filterByPeriod(ventas){
+  const desde=document.getElementById('rDesde').value;
+  const hasta=document.getElementById('rHasta').value;
+  return ventas.filter(v=>(!desde||v.fecha>=desde)&&(!hasta||v.fecha<=hasta));
+}
+
+function setPeriod(days, btn){
+  document.querySelectorAll('.period-pills .pill, .filters-row .pill').forEach(p=>p.classList.remove('active'));
+  btn.classList.add('active');
+  const hasta=new Date();
+  const desde=new Date(); desde.setDate(desde.getDate()-days);
+  document.getElementById('rDesde').value=desde.toISOString().split('T')[0];
+  document.getElementById('rHasta').value=hasta.toISOString().split('T')[0];
+  refreshAll();
+}
+
+function destroyChart(id){if(charts[id]){charts[id].destroy();delete charts[id];}}
+
+function refreshAll(){
+  const allV=getVentas();
+  const ventas=filterByPeriod(allV);
+
+  // KPIs
+  const total=ventas.reduce((s,v)=>s+v.total,0);
+  const units=ventas.reduce((s,v)=>s+v.cantidad,0);
+  document.getElementById('kpiVentas').textContent=ventas.length;
+  document.getElementById('kpiIngresos').textContent=fmt(total);
+  document.getElementById('kpiUnidades').textContent=units;
+  document.getElementById('kpiTicket').textContent=ventas.length?fmt(Math.round(total/ventas.length)):'$0';
+
+  // Chart diario
+  const byDay={};
+  ventas.forEach(v=>{byDay[v.fecha]=(byDay[v.fecha]||0)+v.total;});
+  const days=Object.keys(byDay).sort();
+  destroyChart('chartDiario');
+  charts['chartDiario']=new Chart(document.getElementById('chartDiario'),{
+    type:'line',
+    data:{labels:days,datasets:[{data:days.map(d=>byDay[d]),borderColor:'#D4AF37',backgroundColor:'rgba(212,175,55,0.08)',tension:0.4,pointBackgroundColor:'#D4AF37',pointRadius:3,borderWidth:2,fill:true}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>fmt(v.raw)}}},
+      scales:{x:{grid:{display:false},ticks:{color:tickCol,font:{size:10},maxTicksLimit:8}},y:{grid:{color:gridCol},ticks:{color:tickCol,font:{size:10},callback:v=>'$'+(v/1000).toFixed(0)+'k'}}}}
+  });
+
+  // Chart categoría
+  const byCat={};
+  ventas.forEach(v=>{const cat=v.cat||v.producto;byCat[cat]=(byCat[cat]||0)+v.total;});
+  const catKeys=Object.keys(byCat);
+  destroyChart('chartCat');
+  charts['chartCat']=new Chart(document.getElementById('chartCat'),{
+    type:'doughnut',
+    data:{labels:catKeys,datasets:[{data:catKeys.map(k=>byCat[k]),backgroundColor:COLORS,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:tickCol,font:{size:11},boxWidth:10,padding:8}}}}
+  });
+
+  // Chart top productos
+  const byProd={};
+  ventas.forEach(v=>{byProd[v.producto]=(byProd[v.producto]||0)+v.cantidad;});
+  const sorted=Object.entries(byProd).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  destroyChart('chartTop');
+  charts['chartTop']=new Chart(document.getElementById('chartTop'),{
+    type:'bar',
+    data:{labels:sorted.map(e=>e[0].replace('Vela ','').slice(0,12)),datasets:[{data:sorted.map(e=>e[1]),backgroundColor:COLORS,borderWidth:0,borderRadius:4}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:gridCol},ticks:{color:tickCol,font:{size:11}}},y:{grid:{display:false},ticks:{color:tickCol,font:{size:11}}}}}
+  });
+
+  // Chart canal
+  const byCanal={};
+  ventas.forEach(v=>{const c=v.canal||'Venta directa';byCanal[c]=(byCanal[c]||0)+1;});
+  const canalKeys=Object.keys(byCanal);
+  destroyChart('chartCanal');
+  charts['chartCanal']=new Chart(document.getElementById('chartCanal'),{
+    type:'pie',
+    data:{labels:canalKeys,datasets:[{data:canalKeys.map(k=>byCanal[k]),backgroundColor:COLORS,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{color:tickCol,font:{size:11},boxWidth:10,padding:8}}}}
+  });
+
+  // Tabla
+  const tbody=document.getElementById('reportBody');
+  const empty=document.getElementById('reportEmpty');
+  if(!ventas.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=[...ventas].sort((a,b)=>b.fecha.localeCompare(a.fecha)).slice(0,50).map(v=>`<tr>
+    <td style="font-size:11px;color:var(--text-dim)">#${v.id}</td>
+    <td><div class="product-name">${v.producto}</div></td>
+    <td>${v.cantidad}</td>
+    <td style="font-size:12px">${fmt(v.precio)}</td>
+    <td><strong style="color:var(--gold)">${fmt(v.total)}</strong></td>
+    <td style="font-size:12px;color:var(--text-dim)">${v.fecha}</td>
+    <td><span class="badge badge-neutral" style="font-size:10px">${v.canal||'—'}</span></td>
+  </tr>`).join('');
+}
+
+function exportCSV(){
+  const ventas=filterByPeriod(getVentas());
+  const rows=[['ID','Producto','Cantidad','Precio','Total','Fecha','Canal']];
+  ventas.forEach(v=>rows.push([v.id,v.producto,v.cantidad,v.precio,v.total,v.fecha,v.canal||'']));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);a.download='reporte_ventas.csv';a.click();
+}
+
+// Default: últimos 30 días
+const h=new Date(),d=new Date();d.setDate(d.getDate()-30);
+document.getElementById('rDesde').value=d.toISOString().split('T')[0];
+document.getElementById('rHasta').value=h.toISOString().split('T')[0];
+document.querySelectorAll('.filters-row .pill')[1].classList.add('active');
+document.querySelectorAll('.filters-row .pill')[0].classList.remove('active');
+refreshAll();
+</script>
+</body>
+</html>
