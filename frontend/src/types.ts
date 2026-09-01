@@ -18,6 +18,8 @@ export interface Product {
   name: string
   sku: string
   category: string
+  referenceId?: number
+  colorId?: number
   price: number
   stock: number
   minStock: number
@@ -32,6 +34,8 @@ export interface ProductForm {
   name: string
   sku: string
   category: string
+  referenceId?: number
+  colorId?: number
   price: number
   stock: number
   minStock: number
@@ -103,12 +107,22 @@ export interface Sale {
   total: number
   status: string
   date: string
+  details?: Array<{
+    name: string
+    quantity: number
+    percentage: number
+    availableStock?: number
+  }>
 }
 
 export interface StockItem {
   id: number
   name: string
   category: string
+  reference?: string
+  presentation?: string
+  price?: number
+  color?: string
   stock: number
   minStock: number
 }

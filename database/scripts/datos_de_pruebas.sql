@@ -7,6 +7,7 @@
    CIUDADES
    ------------------------------------------------------------ */
 
+
 INSERT INTO ciudad (nombre)
 VALUES
     ('Bogotá'),

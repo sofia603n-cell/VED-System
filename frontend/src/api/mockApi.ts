@@ -22,6 +22,21 @@ const DEMO_PRODUCTS: Array<Record<string, unknown>> = [
   { id_producto: 5, nombre: 'Vela Lotus', referencia_nombre: 'Aromáticas', precio: 53000, stock_actual: 18, stock_minimo: 7, descripcion: 'Aroma exótico', color_nombre: 'Morado' },
 ]
 
+const DEMO_SALES: Array<Record<string, unknown>> = [
+  {
+    id_pedido: 1001,
+    cliente_nombre: 'Ana Suárez',
+    estado_pedido: 'Pendiente',
+    fecha_entrega: '2026-09-01',
+    total: 224000,
+    detalles: [
+      { nombre_producto: 'Vela Árabe', cantidad: 10, stock_disponible: 1 },
+      { nombre_producto: 'Vela Floral', cantidad: 6, stock_disponible: 3 },
+      { nombre_producto: 'Vela Lotus', cantidad: 5, stock_disponible: 2 },
+    ],
+  },
+]
+
 function getStoredProducts(): Product[] {
   try {
     const raw = sessionStorage.getItem('velas_products')
@@ -231,12 +246,14 @@ function normalizeProduct(raw: Record<string, unknown>): Product {
     name,
     sku: String(raw.sku ?? `VEL-${id || 'NEW'}`),
     category,
+    referenceId: Number(raw.id_referencia ?? raw.referenceId ?? 0) || undefined,
+    colorId: Number(raw.id_color ?? raw.colorId ?? 0) || undefined,
     price,
     stock,
     minStock,
     measures: String(raw.medidas ?? raw.measures ?? presentation),
     presentation,
-    colors: String(raw.color_nombre ?? raw.colors ?? 'Sin color'),
+    colors: String(raw.color_nombre ?? raw.colors ?? raw.color ?? 'Sin color'),
     description: String(raw.descripcion ?? raw.description ?? ''),
     status,
   }
@@ -724,22 +741,120 @@ export async function deleteUser(id: number): Promise<void> {
   }
 }
 
-export async function fetchSales(): Promise<Sale[]> {
-  const sales = await apiFetchAny<Array<Record<string, unknown>>>(['/pedidos', '/sales'])
+export async function fetchReferences(): Promise<Array<{ id: number; nombre_referencia: string }>> {
+  try {
+    return await apiFetchAny<Array<{ id: number; nombre_referencia: string }>>(['/referencias'])
+  } catch {
+    return []
+  }
+}
 
-  return sales.map((sale, index) => {
-    const details = Array.isArray(sale.detalles) ? (sale.detalles as Array<Record<string, unknown>>) : []
-    const firstDetail = details[0]
+export async function fetchColors(): Promise<Array<{ id: number; nombre: string }>> {
+  try {
+    return await apiFetchAny<Array<{ id: number; nombre: string }>>(['/colores'])
+  } catch {
+    return []
+  }
+}
 
-    return {
-      id: Number(sale.id_pedido ?? index + 1),
-      customer: String(sale.cliente_nombre ?? 'Cliente'),
-      product: String(firstDetail?.nombre_producto ?? 'Producto'),
-      total: Number(sale.total ?? 0),
-      status: String(sale.estado_pedido ?? 'Pendiente'),
-      date: String(sale.fecha_registro ?? sale.fecha_entrega ?? new Date().toISOString().slice(0, 10)),
-    }
+export async function createPedido(payload: {
+  id_cliente: number
+  id_vendedor?: number
+  porcentaje?: number
+  fecha_entrega: string
+  tipo_pago: string
+  estado_pago: string
+  canal: string
+  items: Array<{
+    id_producto: number
+    cantidad: number
+    precio_acordado: number
+    alistamiento?: number
+  }>
+}): Promise<Sale> {
+  const created = await apiFetchAny<Record<string, unknown>>(['/pedidos'], {
+    method: 'POST',
+    body: JSON.stringify(payload),
   })
+
+  const details = Array.isArray(created.detalles) ? (created.detalles as Array<Record<string, unknown>>) : []
+  const firstDetail = details[0]
+
+  return {
+    id: Number(created.id_pedido ?? 0),
+    customer: String(created.cliente_nombre ?? 'Cliente'),
+    product: String(firstDetail?.nombre_producto ?? 'Producto'),
+    total: Number(created.total ?? 0),
+    status: String(created.estado_pedido ?? 'Pendiente'),
+    date: String(created.fecha_entrega ?? new Date().toISOString().slice(0, 10)),
+    details: details.map((detail) => ({
+      name: String(detail.nombre_producto ?? 'Producto'),
+      quantity: Number(detail.cantidad ?? 0),
+      percentage: Number(detail.porcentaje ?? 0),
+    })),
+  }
+}
+
+export async function fetchSales(): Promise<Sale[]> {
+  try {
+    const sales = await apiFetchAny<Array<Record<string, unknown>>>(['/pedidos', '/sales'])
+
+    if (!Array.isArray(sales) || sales.length === 0) {
+      throw new Error('Sin ventas reales')
+    }
+
+    return sales.map((sale, index) => {
+      const details = Array.isArray(sale.detalles) ? (sale.detalles as Array<Record<string, unknown>>) : []
+      const firstDetail = details[0]
+
+      return {
+        id: Number(sale.id_pedido ?? index + 1),
+        customer: String(sale.cliente_nombre ?? 'Cliente'),
+        product: String(firstDetail?.nombre_producto ?? 'Producto'),
+        total: Number(sale.total ?? 0),
+        status: String(sale.estado_pedido ?? 'Pendiente'),
+        date: String(sale.fecha_registro ?? sale.fecha_entrega ?? new Date().toISOString().slice(0, 10)),
+        details: details.map((detail) => {
+          const requested = Number(detail.cantidad ?? 0)
+          const available = Number(detail.stock_disponible ?? detail.stock ?? 0)
+          const percentage = requested > 0 ? Math.min(100, Math.round((available / requested) * 100)) : 0
+
+          return {
+            name: String(detail.nombre_producto ?? 'Producto'),
+            quantity: requested,
+            percentage,
+            availableStock: available,
+          }
+        }),
+      }
+    })
+  } catch {
+    return DEMO_SALES.map((sale, index) => {
+      const details = Array.isArray(sale.detalles) ? (sale.detalles as Array<Record<string, unknown>>) : []
+      const firstDetail = details[0]
+
+      return {
+        id: Number(sale.id_pedido ?? index + 1),
+        customer: String(sale.cliente_nombre ?? 'Cliente'),
+        product: String(firstDetail?.nombre_producto ?? 'Producto'),
+        total: Number(sale.total ?? 0),
+        status: String(sale.estado_pedido ?? 'Pendiente'),
+        date: String(sale.fecha_entrega ?? new Date().toISOString().slice(0, 10)),
+        details: details.map((detail) => {
+          const quantity = Number(detail.cantidad ?? 0)
+          const available = Number(detail.stock_disponible ?? 0)
+          const percentage = quantity > 0 ? Math.min(100, Math.round((available / quantity) * 100)) : 0
+
+          return {
+            name: String(detail.nombre_producto ?? 'Producto'),
+            quantity,
+            percentage,
+            availableStock: available,
+          }
+        }),
+      }
+    })
+  }
 }
 
 export async function fetchStock(): Promise<StockItem[]> {
@@ -752,6 +867,10 @@ export async function fetchStock(): Promise<StockItem[]> {
         id: Number(normalized.id_producto ?? normalized.id ?? index + 1),
         name: String(normalized.nombre ?? normalized.name ?? 'Producto'),
         category: String(normalized.referencia_nombre ?? normalized.category ?? 'General'),
+        reference: String(normalized.referencia_nombre ?? normalized.reference ?? normalized.category ?? 'General'),
+        presentation: String(normalized.presentacion ?? normalized.presentation ?? 'unidad'),
+        color: String(normalized.color_nombre ?? normalized.color ?? normalized.colors ?? 'Sin color'),
+        price: Number(normalized.precio ?? normalized.price ?? 0),
         stock: Number(normalized.stock_actual ?? normalized.stock ?? 0),
         minStock: Number(normalized.stock_minimo ?? normalized.minStock ?? 0),
       }
@@ -761,6 +880,10 @@ export async function fetchStock(): Promise<StockItem[]> {
       id: Number(product.id_producto ?? 0),
       name: String(product.nombre ?? 'Producto'),
       category: String(product.referencia_nombre ?? 'General'),
+      reference: String(product.referencia_nombre ?? 'General'),
+      presentation: 'unidad',
+      color: String(product.color_nombre ?? 'Sin color'),
+      price: Number(product.precio ?? 0),
       stock: Number(product.stock_actual ?? 0),
       minStock: Number(product.stock_minimo ?? 0),
     }))

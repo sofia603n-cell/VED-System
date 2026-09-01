@@ -24,9 +24,10 @@ export function Sidebar({ user, onLogout }: { user: User; onLogout: () => void }
         <NavLink to="/productos" label="Productos" icon="ti-candle" />
         <NavLink to="/stock" label="Stock" icon="ti-package" badge="3" />
         <NavLink to="/entradas" label="Entradas" icon="ti-arrow-bar-to-down" />
+        <NavLink to="/salidas" label="Salidas" icon="ti-arrow-bar-to-up" />
 
         <div className="nav-section-label">Ventas</div>
-        <NavLink to="/ventas" label="Ventas" icon="ti-shopping-bag" />
+        <NavLink to="/ventas" label="Pedidos" icon="ti-shopping-bag" />
         <NavLink to="/reportes" label="Reportes" icon="ti-chart-bar" />
 
         <div className="nav-section-label">Sistema</div>

@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createProduct, deleteProduct, fetchProducts, updateProduct } from '../api/mockApi'
+import { createProduct, deleteProduct, fetchProducts, fetchReferences, updateProduct } from '../api/mockApi'
 import type { Product, ProductForm } from '../types'
 import { getProductState, stateClass } from '../utils/formatters'
 import { formatCurrency } from '../utils/formatters'
-
-function getStockBarPercent(product: Pick<Product, 'stock' | 'minStock'>) {
-  if (product.stock <= 0) return 0
-  const reference = Math.max(product.minStock * 2, 12)
-  return Math.min(100, Math.max(8, (product.stock / reference) * 100))
-}
 
 function emptyProductForm(): ProductForm {
   return {
@@ -28,23 +22,26 @@ function emptyProductForm(): ProductForm {
 
 export function ProductsPage() {
   const [items, setItems] = useState<Product[]>([])
+  const [referenceOptions, setReferenceOptions] = useState<Array<{ id: number; nombre_referencia: string }>>([])
   const [query, setQuery] = useState('')
-  const [category, setCategory] = useState('')
+  const [reference, setReference] = useState('')
   const [stateFilter, setStateFilter] = useState('')
   const [sort, setSort] = useState('name')
   const [isModalOpen, setModalOpen] = useState(false)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<ProductForm>(emptyProductForm())
 
   useEffect(() => {
     fetchProducts().then(setItems)
+    fetchReferences().then((references) => setReferenceOptions(references))
   }, [])
 
   const filteredItems = useMemo(() => {
     const search = query.toLowerCase()
     const result = items.filter((product) => {
-      const matchText = !search || [product.name, product.sku, product.category].join(' ').toLowerCase().includes(search)
-      const matchCategory = !category || product.category === category
+      const matchText = !search || [product.name, product.sku, product.category, product.presentation, product.colors].join(' ').toLowerCase().includes(search)
+      const matchCategory = !reference || product.category === reference
       const matchState = !stateFilter || getProductState(product) === stateFilter
       return matchText && matchCategory && matchState
     })
@@ -63,7 +60,7 @@ export function ProductsPage() {
     })
 
     return result
-  }, [items, query, category, stateFilter, sort])
+  }, [items, query, reference, stateFilter, sort])
 
   const openCreate = () => {
     setEditingId(null)
@@ -154,16 +151,17 @@ export function ProductsPage() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
-        <select className="form-input small" value={category} onChange={(event) => setCategory(event.target.value)}>
-          <option value="">Todas las categorías</option>
-          <option value="Veladora">Veladora</option>
-          <option value="Veladora Especial">Veladora Especial</option>
-          <option value="Pebetero">Pebetero</option>
-          <option value="Vela Lisa">Vela Lisa</option>
-          <option value="Vela Acanalada">Vela Acanalada</option>
-          <option value="Vela Aromatizada">Vela Aromatizada</option>
-          <option value="Vela Personalizada">Vela Personalizada</option>
-          <option value="Parafina">Parafina</option>
+        <select className="form-input small" value={reference} onChange={(event) => setReference(event.target.value)}>
+          <option value="">Todas las referencias</option>
+          {referenceOptions.length > 0 ? (
+            referenceOptions.map((option) => (
+              <option key={option.id} value={option.nombre_referencia}>{option.nombre_referencia}</option>
+            ))
+          ) : (
+            Array.from(new Set(items.map((product) => product.category))).map((category) => (
+              <option key={category} value={category}>{category}</option>
+            ))
+          )}
         </select>
         <select className="form-input small" value={stateFilter} onChange={(event) => setStateFilter(event.target.value)}>
           <option value="">Todos los estados</option>
@@ -175,7 +173,6 @@ export function ProductsPage() {
           <option value="name">Ordenar: nombre A-Z</option>
           <option value="ref">Ordenar: referencia</option>
           <option value="price">Ordenar: precio ↑</option>
-          <option value="stock">Ordenar: stock ↓</option>
         </select>
       </div>
 
@@ -184,10 +181,10 @@ export function ProductsPage() {
           <thead>
             <tr>
               <th>Producto</th>
-              <th>Categoría</th>
+              <th>Referencia</th>
+              <th>Presentación</th>
+              <th>Color</th>
               <th>Precio</th>
-              <th>Stock</th>
-              <th>Disponibilidad</th>
               <th>Estado</th>
               <th>Acciones</th>
             </tr>
@@ -195,7 +192,6 @@ export function ProductsPage() {
           <tbody>
             {filteredItems.map((product) => {
               const state = getProductState(product)
-              const stockPercent = getStockBarPercent(product)
               return (
                 <tr key={product.id}>
                   <td>
@@ -208,22 +204,9 @@ export function ProductsPage() {
                     </div>
                   </td>
                   <td><span className="badge badge-neutral">{product.category}</span></td>
+                  <td>{product.presentation || 'unidad'}</td>
+                  <td>{product.colors || 'Sin color'}</td>
                   <td>{formatCurrency(product.price)}</td>
-                  <td>
-                    <div className="stock-meter-wrap">
-                      <div className="stock-meter-label">
-                        <span>{product.stock}</span>
-                        <small>{product.minStock} mín.</small>
-                      </div>
-                      <div className="stock-meter">
-                        <span
-                          className={`stock-fill ${state}`}
-                          style={{ width: `${stockPercent}%` }}
-                        />
-                      </div>
-                    </div>
-                  </td>
-                  <td>{product.stock > product.minStock ? 'Disponible' : 'Bajo mínimo'}</td>
                   <td>
                     <span className={`badge ${stateClass(state)}`}>
                       {state === 'success' ? 'En stock' : state === 'warning' ? 'Stock bajo' : 'Sin stock'}
@@ -233,6 +216,9 @@ export function ProductsPage() {
                     <div className="action-buttons">
                       <button type="button" className="icon-btn ghost" onClick={() => openEdit(product)}>
                         <i className="ti ti-edit" />
+                      </button>
+                      <button type="button" className="icon-btn ghost" onClick={() => setSelectedProduct(product)}>
+                        <i className="ti ti-eye" />
                       </button>
                       <button type="button" className="icon-btn ghost danger" onClick={() => handleDelete(product.id)}>
                         <i className="ti ti-trash" />
@@ -245,6 +231,32 @@ export function ProductsPage() {
           </tbody>
         </table>
       </div>
+
+      {selectedProduct ? (
+        <div className="modal-overlay open" onClick={() => setSelectedProduct(null)}>
+          <div className="modal" onClick={(event) => event.stopPropagation()}>
+            <div className="modal-title">Detalles del producto</div>
+            <div className="card-header compact" style={{ marginBottom: '12px' }}>
+              <div>
+                <div className="product-name" style={{ fontSize: '18px', marginBottom: '4px' }}>{selectedProduct.name}</div>
+                <div className="product-sku">{selectedProduct.sku}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gap: '10px', fontSize: '14px', color: 'var(--text)' }}>
+              <div><strong>Referencia:</strong> {selectedProduct.category}</div>
+              <div><strong>Presentación:</strong> {selectedProduct.presentation || 'unidad'}</div>
+              <div><strong>Color:</strong> {selectedProduct.colors || 'Sin color'}</div>
+              <div><strong>Precio:</strong> {formatCurrency(selectedProduct.price)}</div>
+              <div><strong>Descripción:</strong> {selectedProduct.description || 'Sin descripción'}</div>
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="btn-primary" onClick={() => setSelectedProduct(null)}>Aceptar</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {isModalOpen ? (
         <div className="modal-overlay open" onClick={() => setModalOpen(false)}>
@@ -271,7 +283,7 @@ export function ProductsPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Categoría *</label>
+                  <label className="form-label">Referencia *</label>
                   <select className="form-input" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
                     <option value="Veladora">Veladora</option>
                     <option value="Veladora Especial">Veladora Especial</option>

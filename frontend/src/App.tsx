@@ -6,6 +6,7 @@ import { AuditPage } from './pages/AuditPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EntriesPage } from './pages/EntriesPage'
 import { LoginPage } from './pages/LoginPage'
+import { OutputPage } from './pages/OutputPage'
 import { ProductsPage } from './pages/ProductsPage'
 import { ReportsPage } from './pages/ReportsPage'
 import { SalesPage } from './pages/SalesPage'
@@ -58,6 +59,7 @@ function AppRoutes() {
         <Route path="/productos" element={<ProductsPage />} />
         <Route path="/stock" element={<StockPage />} />
         <Route path="/entradas" element={<EntriesPage />} />
+        <Route path="/salidas" element={<OutputPage />} />
         <Route path="/ventas" element={<SalesPage />} />
         <Route path="/reportes" element={<ReportsPage />} />
         <Route path="/usuarios" element={<UsersPage />} />
@@ -223,7 +225,8 @@ function titleFromPath(pathname: string) {
     '/productos': 'Catálogo de productos',
     '/stock': 'Control de stock',
     '/entradas': 'Entradas de inventario',
-    '/ventas': 'Ventas',
+    '/salidas': 'Salidas de inventario',
+    '/ventas': 'Pedidos',
     '/reportes': 'Reportes',
     '/usuarios': 'Gestión de usuarios',
     '/auditoria': 'Auditoría del sistema',
