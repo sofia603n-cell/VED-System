@@ -43,13 +43,18 @@ export interface ProductForm {
 }
 
 export interface UserForm {
-  dni: string
-  name: string
-  initials: string
-  email: string
+  nombre_usuario: string
+  apellidos_usuario: string
+  usuario_login: string
+  documento: string
+  rol: 'admin' | 'super_admin'
+  correo: string
+  telefono: string
+  direccion: string
+  id_ciudad: number
   password: string
-  role: UserRole
-  estado: UserStatus
+  estado: 'Activo' | 'Inactivo'
+  activo: boolean
 }
 
 export interface DashboardMetric {

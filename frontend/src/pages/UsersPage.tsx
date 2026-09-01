@@ -26,13 +26,18 @@ export function UsersPage() {
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<UserForm>({
-    dni: '',
-    name: '',
-    initials: '',
-    email: '',
+    nombre_usuario: '',
+    apellidos_usuario: '',
+    usuario_login: '',
+    documento: '',
+    rol: 'admin',
+    correo: '',
+    telefono: '',
+    direccion: '',
+    id_ciudad: 0,
     password: '',
-    role: 'normal',
-    estado: 'activo',
+    estado: 'Activo',
+    activo: true,
   })
 
   useEffect(() => {
@@ -65,27 +70,45 @@ export function UsersPage() {
 
   const openCreate = () => {
     setEditingId(null)
-    setForm({ dni: '', name: '', initials: '', email: '', password: '', role: 'normal', estado: 'activo' })
+    setForm({
+      nombre_usuario: '',
+      apellidos_usuario: '',
+      usuario_login: '',
+      documento: '',
+      rol: 'admin',
+      correo: '',
+      telefono: '',
+      direccion: '',
+      id_ciudad: 0,
+      password: '',
+      estado: 'Activo',
+      activo: true,
+    })
     setModalOpen(true)
   }
 
   const openEdit = (user: User) => {
     setEditingId(user.id)
     setForm({
-      dni: user.dni || '',
-      name: user.name,
-      initials: user.initials || '',
-      email: user.email,
+      nombre_usuario: user.name.split(' ')[0] || '',
+      apellidos_usuario: user.name.split(' ').slice(1).join(' ') || '',
+      usuario_login: (user.email || '').split('@')[0] || '',
+      documento: user.dni || '',
+      rol: user.role === 'supremo' ? 'super_admin' : 'admin',
+      correo: user.email,
+      telefono: '',
+      direccion: '',
+      id_ciudad: 0,
       password: '',
-      role: user.role,
-      estado: user.estado,
+      estado: user.estado === 'inactivo' ? 'Inactivo' : 'Activo',
+      activo: user.estado !== 'inactivo',
     })
     setModalOpen(true)
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.name || !form.email || !form.dni || (!form.password && editingId === null)) return
+    if (!form.nombre_usuario || !form.apellidos_usuario || !form.usuario_login || !form.documento || !form.correo || (!form.password && editingId === null)) return
 
     if (editingId !== null) {
       const updated = await updateUser(editingId, form)
@@ -183,52 +206,82 @@ export function UsersPage() {
             <form onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Nombre *</label>
-                  <input className="form-input" value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} />
+                  <label className="form-label">Nombre usuario *</label>
+                  <input className="form-input" value={form.nombre_usuario} onChange={(event) => setForm({ ...form, nombre_usuario: event.target.value })} />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Iniciales</label>
-                  <input className="form-input" value={form.initials} onChange={(event) => setForm({ ...form, initials: event.target.value })} />
+                  <label className="form-label">Apellidos usuario *</label>
+                  <input className="form-input" value={form.apellidos_usuario} onChange={(event) => setForm({ ...form, apellidos_usuario: event.target.value })} />
                 </div>
               </div>
 
               <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Usuario login *</label>
+                  <input className="form-input" value={form.usuario_login} onChange={(event) => setForm({ ...form, usuario_login: event.target.value })} />
+                </div>
                 <div className="form-group">
                   <label className="form-label">Documento *</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={form.dni}
-                    onChange={(event) => setForm({ ...form, dni: event.target.value })}
-                    placeholder="DNI"
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Correo electrónico *</label>
-                  <input type="email" className="form-input" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} />
+                  <input type="text" className="form-input" value={form.documento} onChange={(event) => setForm({ ...form, documento: event.target.value })} />
                 </div>
               </div>
 
               <div className="form-row">
                 <div className="form-group">
-                  <label className="form-label">Contraseña *</label>
-                  <input type="password" className="form-input" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} />
+                  <label className="form-label">Rol *</label>
+                  <select className="form-input" value={form.rol} onChange={(event) => setForm({ ...form, rol: event.target.value as UserForm['rol'] })}>
+                    <option value="admin">admin</option>
+                    <option value="super_admin">super_admin</option>
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Rol *</label>
-                  <select className="form-input" value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value as User['role'] })}>
-                    <option value="normal">Admin Normal</option>
-                    <option value="supremo">Admin Supremo</option>
-                  </select>
+                  <label className="form-label">Correo *</label>
+                  <input type="email" className="form-input" value={form.correo} onChange={(event) => setForm({ ...form, correo: event.target.value })} />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Estado</label>
-                <select className="form-input" value={form.estado} onChange={(event) => setForm({ ...form, estado: event.target.value as User['estado'] })}>
-                  <option value="activo">Activo</option>
-                  <option value="inactivo">Inactivo</option>
-                </select>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Teléfono</label>
+                  <input type="text" className="form-input" value={form.telefono} onChange={(event) => setForm({ ...form, telefono: event.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Dirección</label>
+                  <input type="text" className="form-input" value={form.direccion} onChange={(event) => setForm({ ...form, direccion: event.target.value })} />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">id_ciudad</label>
+                  <input type="number" min={0} className="form-input" value={form.id_ciudad} onChange={(event) => setForm({ ...form, id_ciudad: Number(event.target.value) })} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Password *</label>
+                  <input type="password" className="form-input" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Estado</label>
+                  <select className="form-input" value={form.estado} onChange={(event) => {
+                    const nextEstado = event.target.value as UserForm['estado']
+                    setForm({ ...form, estado: nextEstado, activo: nextEstado === 'Activo' })
+                  }}>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Activo</label>
+                  <input
+                    type="checkbox"
+                    className="form-input"
+                    checked={form.activo}
+                    onChange={(event) => setForm({ ...form, activo: event.target.checked, estado: event.target.checked ? 'Activo' : 'Inactivo' })}
+                  />
+                </div>
               </div>
 
               <div className="modal-actions">

@@ -11,7 +11,8 @@
 } from '../types'
 import { formatCurrency } from '../utils/formatters'
 
-const API_BASE_URLS = ['http://localhost:8001/api', 'http://localhost:8000/api']
+const API_BASE_URLS = [import.meta.env?.VITE_API_BASE_URL || 'http://localhost:8000/api']
+const REQUEST_TIMEOUT_MS = 2000
 
 const DEMO_PRODUCTS: Array<Record<string, unknown>> = [
   { id_producto: 1, nombre: 'Vela Árabe', referencia_nombre: 'Velas', precio: 42000, stock_actual: 34, stock_minimo: 12, descripcion: 'Vela de cera premium', color_nombre: 'Dorado' },
@@ -121,30 +122,38 @@ async function apiRequest<T>(path: string, options: RequestInit = {}, urlCandida
         headers.set('Authorization', `Bearer ${token}`)
       }
 
-      const response = await fetch(`${baseUrl}${path}`, {
-        ...options,
-        headers,
-      })
+      const controller = new AbortController()
+      const timeoutId = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS)
 
-      if (response.status === 204) {
-        return undefined as T
+      try {
+        const response = await fetch(`${baseUrl}${path}`, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        })
+
+        if (response.status === 204) {
+          return undefined as T
+        }
+
+        const payload = await response.text()
+        const data = payload ? JSON.parse(payload) : null
+
+        if (!response.ok) {
+          throw new Error(readResponseError(data))
+        }
+
+        return data as T
+      } finally {
+        window.clearTimeout(timeoutId)
       }
-
-      const payload = await response.text()
-      const data = payload ? JSON.parse(payload) : null
-
-      if (!response.ok) {
-        throw new Error(readResponseError(data))
-      }
-
-      return data as T
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error de la API'
       lastError = new Error(message)
       if (path === '/auth/login' || path === '/login') {
         continue
       }
-      if (message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('404')) {
+      if (message.includes('Failed to fetch') || message.includes('NetworkError') || message.includes('404') || message.includes('The operation was aborted')) {
         continue
       }
       throw error
@@ -598,21 +607,19 @@ export async function fetchUsers(): Promise<User[]> {
 }
 
 export async function createUser(user: UserForm): Promise<User> {
-  const [nombre_usuario, ...rest] = (user.name || '').trim().split(/\s+/)
-  const apellidos_usuario = rest.join(' ')
-  const documento = String(user.dni || Date.now() % 1000000000)
-  const usuario_login = (user.email || '').split('@')[0] || `usuario_${Date.now()}`
-
   const payload = {
-    nombre_usuario: nombre_usuario || 'Usuario',
-    apellidos_usuario: apellidos_usuario || 'Sistema',
-    usuario_login,
-    documento,
-    rol: user.role === 'supremo' ? 'super_admin' : 'admin',
-    correo: user.email,
+    nombre_usuario: user.nombre_usuario || 'Usuario',
+    apellidos_usuario: user.apellidos_usuario || 'Sistema',
+    usuario_login: user.usuario_login || `usuario_${Date.now()}`,
+    documento: user.documento || String(Date.now() % 1000000000),
+    rol: user.rol || 'admin',
+    correo: user.correo || '',
+    telefono: user.telefono || '',
+    direccion: user.direccion || '',
+    id_ciudad: Number(user.id_ciudad ?? 0),
     password: user.password,
-    estado: user.estado === 'inactivo' ? 'Inactivo' : 'Activo',
-    activo: user.estado !== 'inactivo',
+    estado: user.estado || 'Activo',
+    activo: user.activo !== false,
   }
 
   try {
@@ -630,15 +637,23 @@ export async function createUser(user: UserForm): Promise<User> {
   } catch {
     const existing = getStoredUsers()
     const nextId = existing.length ? Math.max(...existing.map((item) => item.id)) + 1 : 1
+    const displayName = `${user.nombre_usuario || 'Usuario'} ${user.apellidos_usuario || ''}`.trim() || 'Usuario'
+    const initials = (user.nombre_usuario || 'U')
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part: string) => part[0]?.toUpperCase() || '')
+      .join('') || 'US'
+
     const createdUser: User = {
       id: nextId,
-      dni: documento,
-      name: (user.name || 'Usuario').trim() || 'Usuario',
-      initials: (user.initials || (user.name || 'Usuario').trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'US'),
-      email: user.email,
+      dni: user.documento || '',
+      name: displayName,
+      initials,
+      email: user.correo || '',
       password: user.password,
-      role: user.role,
-      estado: user.estado,
+      role: user.rol === 'super_admin' ? 'supremo' : 'normal',
+      estado: user.estado === 'Inactivo' ? 'inactivo' : 'activo',
     }
 
     const updatedUsers = [createdUser, ...existing]
@@ -648,17 +663,18 @@ export async function createUser(user: UserForm): Promise<User> {
 }
 
 export async function updateUser(id: number, user: UserForm): Promise<User> {
-  const [nombre_usuario, ...rest] = (user.name || '').trim().split(/\s+/)
-  const apellidos_usuario = rest.join(' ')
-
   const payload = {
-    nombre_usuario: nombre_usuario || 'Usuario',
-    apellidos_usuario: apellidos_usuario || 'Sistema',
-    documento: user.dni || undefined,
-    correo: user.email,
-    rol: user.role === 'supremo' ? 'super_admin' : 'admin',
-    estado: user.estado === 'inactivo' ? 'Inactivo' : 'Activo',
-    activo: user.estado !== 'inactivo',
+    nombre_usuario: user.nombre_usuario || 'Usuario',
+    apellidos_usuario: user.apellidos_usuario || 'Sistema',
+    usuario_login: user.usuario_login || `usuario_${Date.now()}`,
+    documento: user.documento || undefined,
+    correo: user.correo,
+    telefono: user.telefono || '',
+    direccion: user.direccion || '',
+    id_ciudad: Number(user.id_ciudad ?? 0),
+    rol: user.rol || 'admin',
+    estado: user.estado || 'Activo',
+    activo: user.activo !== false,
     ...(user.password ? { password: user.password } : {}),
   }
 
@@ -674,15 +690,23 @@ export async function updateUser(id: number, user: UserForm): Promise<User> {
     return normalized
   } catch {
     const existing = getStoredUsers()
+    const displayName = `${user.nombre_usuario || 'Usuario'} ${user.apellidos_usuario || ''}`.trim() || 'Usuario'
+    const initials = (user.nombre_usuario || 'U')
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part: string) => part[0]?.toUpperCase() || '')
+      .join('') || 'US'
+
     const updatedUser: User = {
       id,
-      dni: user.dni,
-      name: (user.name || 'Usuario').trim() || 'Usuario',
-      initials: user.initials || (user.name || 'Usuario').trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() || '').join('') || 'US',
-      email: user.email,
+      dni: user.documento || existing.find((item) => item.id === id)?.dni || '',
+      name: displayName,
+      initials,
+      email: user.correo || existing.find((item) => item.id === id)?.email || '',
       password: user.password || existing.find((item) => item.id === id)?.password,
-      role: user.role,
-      estado: user.estado,
+      role: user.rol === 'super_admin' ? 'supremo' : 'normal',
+      estado: user.estado === 'Inactivo' ? 'inactivo' : 'activo',
     }
 
     const nextUsers = existing.map((item) => (item.id === id ? updatedUser : item))

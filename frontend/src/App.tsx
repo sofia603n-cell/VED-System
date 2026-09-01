@@ -21,14 +21,27 @@ function App() {
   )
 }
 
-function AppRoutes() {
-  const [user, setUser] = useState<User | null>(() => {
+function getStoredUser(): User | null {
+  try {
     const stored = sessionStorage.getItem('velas_user')
-    return stored ? JSON.parse(stored) : null
-  })
+    if (!stored) return null
+    const parsed = JSON.parse(stored)
+    return parsed && typeof parsed === 'object' ? parsed as User : null
+  } catch {
+    sessionStorage.removeItem('velas_user')
+    return null
+  }
+}
+
+function AppRoutes() {
+  const [user, setUser] = useState<User | null>(() => getStoredUser())
   const [isLightMode, setIsLightMode] = useState<boolean>(() => {
-    const storedTheme = localStorage.getItem('velas_theme')
-    return storedTheme === 'light'
+    try {
+      const storedTheme = localStorage.getItem('velas_theme')
+      return storedTheme === 'light'
+    } catch {
+      return false
+    }
   })
 
   useEffect(() => {
