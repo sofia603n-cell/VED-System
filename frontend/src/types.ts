@@ -43,6 +43,7 @@ export interface ProductForm {
 }
 
 export interface UserForm {
+  dni: string
   name: string
   initials: string
   email: string
