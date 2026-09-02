@@ -1,0 +1,22 @@
+# Framework Web y Servidor ASGI
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+
+# Validación de Datos y Configuración
+pydantic>=2.6.0
+pydantic-settings>=2.2.0
+email-validator>=2.1.0
+
+# Base de Datos y ORM (PostgreSQL)
+SQLAlchemy>=2.0.28
+psycopg2-binary>=2.9.9
+alembic>=1.13.1
+
+# Seguridad, Autenticación y Criptografía
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+bcrypt>=4.0.1
+python-multipart>=0.0.9
+
+# Variables de Entorno y Utilidades
+python-dotenv>=1.0.1
