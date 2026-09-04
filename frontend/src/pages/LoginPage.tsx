@@ -165,6 +165,7 @@ export function LoginPage({ user, setUser }: { user: User | null; setUser: (user
                 onChange={(event) => setPassword(event.target.value)}
                 placeholder="••••••••"
                 autoComplete="current-password"
+                minLength={4}
                 required
               />
               <button

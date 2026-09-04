@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchProducts, fetchSales } from '../api/mockApi'
+import { createSale, fetchProducts, fetchSales } from '../api/mockApi'
 import { useToast } from '../context/ToastContext'
 import type { Product, Sale } from '../types'
 import { formatCurrency } from '../utils/formatters'
@@ -17,7 +17,8 @@ export function SalesPage() {
   const [receiptSale, setReceiptSale] = useState<SaleRecord | null>(null)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todas')
-  const { success, info } = useToast()
+  const { success, info, error } = useToast()
+  const [saving, setSaving] = useState(false)
 
   const [form, setForm] = useState({
     customer: '',
@@ -79,28 +80,18 @@ export function SalesPage() {
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.customer.trim() || !form.productName.trim() || form.quantity <= 0) {
+    const selectedProduct = products.find((product) => product.id === form.productId)
+    if (!form.customer.trim() || !selectedProduct || form.quantity <= 0 || form.unitPrice < 0) {
+      error('Selecciona cliente y producto, e ingresa valores válidos.', 'Revisa el formulario')
       return
     }
-
-    const calculatedTotal = form.quantity * form.unitPrice
-    const nextId = sales.length ? Math.max(...sales.map((s) => s.id)) + 1 : 1
-
-    const newSale: SaleRecord = {
-      id: nextId,
-      customer: form.customer.trim(),
-      product: form.productName.trim(),
-      quantity: form.quantity,
-      unitPrice: form.unitPrice,
-      total: calculatedTotal,
-      status: form.status,
-      date: form.date || new Date().toISOString().slice(0, 10),
-      paymentMethod: form.paymentMethod,
-    }
-
-    setSales((current) => [newSale, ...current])
-    success(`Venta #${nextId} por ${formatCurrency(calculatedTotal)} registrada`, 'Venta Exitosa')
-    setModalOpen(false)
+    if (form.quantity > selectedProduct.stock) { error('La cantidad supera el stock disponible.', 'Stock insuficiente'); return }
+    setSaving(true)
+    void createSale(form).then((created) => {
+      setSales((current) => [{ ...created, quantity: form.quantity, unitPrice: form.unitPrice, paymentMethod: form.paymentMethod }, ...current])
+      success(`Venta #${created.id} por ${formatCurrency(created.total)} registrada`, 'Venta Exitosa')
+      setModalOpen(false)
+    }).catch((caught) => error(caught instanceof Error ? caught.message : 'No fue posible registrar la venta.', 'Error de venta')).finally(() => setSaving(false))
   }
 
   const handleExportCSV = () => {
@@ -380,8 +371,8 @@ export function SalesPage() {
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  <i className="ti ti-check" /> Confirmar Venta
+                <button type="submit" className="btn-primary" disabled={saving || !products.length}>
+                  <i className="ti ti-check" /> {saving ? 'Guardando...' : 'Confirmar Venta'}
                 </button>
               </div>
             </form>

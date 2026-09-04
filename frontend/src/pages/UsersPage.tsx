@@ -28,6 +28,7 @@ export function UsersPage() {
   const [isModalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [userToDelete, setUserToDelete] = useState<User | null>(null)
+  const [saving, setSaving] = useState(false)
   const { success, warning, info } = useToast()
 
   const [form, setForm] = useState<UserForm>({
@@ -90,6 +91,12 @@ export function UsersPage() {
     event.preventDefault()
     if (!form.name || !form.email || !form.dni || (!form.password && editingId === null)) return
 
+    if (form.password && form.password.length < 4) {
+      warning('La contraseña debe tener al menos 4 caracteres.', 'Revisa el formulario')
+      return
+    }
+    setSaving(true)
+    try {
     if (editingId !== null) {
       const updated = await updateUser(editingId, form)
       setUsers((current) => current.map((item) => (item.id === editingId ? updated : item)))
@@ -101,6 +108,9 @@ export function UsersPage() {
     }
 
     setModalOpen(false)
+    } catch (caught) {
+      warning(caught instanceof Error ? caught.message : 'No fue posible guardar el usuario.', 'Error al guardar')
+    } finally { setSaving(false) }
   }
 
   const toggleUserStatus = async (user: User) => {
@@ -315,6 +325,7 @@ export function UsersPage() {
                       placeholder="ej. 1020304050"
                       value={form.dni}
                       onChange={(e) => setForm({ ...form, dni: e.target.value })}
+                      maxLength={30}
                       required
                     />
                   </div>
@@ -343,6 +354,7 @@ export function UsersPage() {
                       placeholder="••••••••"
                       value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      minLength={4}
                       required={editingId === null}
                     />
                   </div>
@@ -377,8 +389,8 @@ export function UsersPage() {
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  <i className="ti ti-device-floppy" /> {editingId ? 'Guardar Cambios' : 'Crear Usuario'}
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  <i className="ti ti-device-floppy" /> {saving ? 'Guardando...' : editingId ? 'Guardar Cambios' : 'Crear Usuario'}
                 </button>
               </div>
             </form>

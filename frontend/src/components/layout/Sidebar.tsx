@@ -51,7 +51,7 @@ export function Sidebar({ user, onLogout, isOpen, onClose }: SidebarProps) {
           <div className="nav-section-label">Inventario</div>
           <NavLink to="/productos" label="Productos" icon="ti-candle" onClick={onClose} />
           <NavLink to="/stock" label="Control de Stock" icon="ti-package" badge="3" badgeType="warn" onClick={onClose} />
-          <NavLink to="/entradas" label="Entradas de Stock" icon="ti-arrow-bar-to-down" onClick={onClose} />
+          <NavLink to="/entradas" label="Movimientos e Historial" icon="ti-arrows-exchange" onClick={onClose} />
 
           <div className="nav-section-label">Ventas</div>
           <NavLink to="/ventas" label="Ventas" icon="ti-shopping-bag" onClick={onClose} />

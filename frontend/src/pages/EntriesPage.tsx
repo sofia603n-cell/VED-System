@@ -1,326 +1,110 @@
 import { useEffect, useMemo, useState } from 'react'
-import { fetchProducts } from '../api/mockApi'
+import { createInventoryMovement, fetchInventoryMovements, fetchProducts } from '../api/mockApi'
 import { useToast } from '../context/ToastContext'
-import type { Product } from '../types'
+import type { InventoryMovement, InventoryMovementForm, MovementType, Product } from '../types'
 
-type EntryType = 'Compra' | 'Producción' | 'Ajuste' | 'Devolución'
+type ViewFilter = 'todos' | MovementType
 
-interface InventoryEntry {
-  id: number
-  product: string
-  sku?: string
-  quantity: number
-  type: EntryType
-  date: string
-  note: string
-  supplier?: string
+const reasons: Record<MovementType, Array<InventoryMovementForm['reason']>> = {
+  entrada: ['Producción', 'Reembolso'],
+  salida: ['Daño', 'Defecto'],
 }
-
-const initialEntries: InventoryEntry[] = [
-  { id: 1, product: 'Vela Árabe Dorada', sku: 'VEL-1', quantity: 40, type: 'Producción', date: '2026-09-02', note: 'Lote artesanal acabado oro', supplier: 'Taller Central' },
-  { id: 2, product: 'Vela Floral Aromaterapia', sku: 'VEL-2', quantity: 25, type: 'Compra', date: '2026-09-01', note: 'Materias primas y ceras', supplier: 'Insumos Parafinas S.A.S.' },
-  { id: 3, product: 'Vela Navideña Estrella', sku: 'VEL-3', quantity: 18, type: 'Producción', date: '2026-08-30', note: 'Lote de temporada navideña', supplier: 'Taller Central' },
-  { id: 4, product: 'Vela Relajante Brisa', sku: 'VEL-4', quantity: 8, type: 'Ajuste', date: '2026-08-28', note: 'Ajuste de conteo físico', supplier: 'Auditoría interna' },
-]
+const formatter = new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
 
 export function EntriesPage() {
-  const [entries, setEntries] = useState<InventoryEntry[]>(initialEntries)
+  const [movements, setMovements] = useState<InventoryMovement[]>([])
   const [products, setProducts] = useState<Product[]>([])
-  const [filter, setFilter] = useState<'Todas' | EntryType>('Todas')
-  const [isModalOpen, setModalOpen] = useState(false)
-  const { success, info } = useToast()
+  const [filter, setFilter] = useState<ViewFilter>('todos')
+  const [open, setOpen] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const { success, error, info } = useToast()
+  const [form, setForm] = useState<InventoryMovementForm>({ productId: 0, quantity: 1, reason: 'Producción' })
 
-  const [form, setForm] = useState({
-    product: '',
-    quantity: 10,
-    type: 'Producción' as EntryType,
-    date: new Date().toISOString().slice(0, 10),
-    note: '',
-    supplier: '',
-  })
+  const load = async () => {
+    const [history, catalog] = await Promise.all([fetchInventoryMovements(), fetchProducts()])
+    setMovements(history)
+    setProducts(catalog)
+    setForm((value) => value.productId || !catalog.length ? value : { ...value, productId: catalog[0].id })
+  }
+  useEffect(() => { void load() }, [])
 
-  useEffect(() => {
-    fetchProducts().then((data) => {
-      setProducts(data)
-      if (data.length > 0) {
-        setForm((prev) => ({ ...prev, product: data[0].name }))
-      }
-    })
-  }, [])
+  const visible = useMemo(() => filter === 'todos' ? movements : movements.filter((m) => m.type === filter), [filter, movements])
+  const units = (type: MovementType) => movements.filter((m) => m.type === type).reduce((sum, m) => sum + m.items.reduce((subtotal, item) => subtotal + item.quantity, 0), 0)
+  const typeForForm: MovementType = reasons.entrada.includes(form.reason) ? 'entrada' : 'salida'
 
-  const filteredEntries = useMemo(() => {
-    if (filter === 'Todas') return entries
-    return entries.filter((entry) => entry.type === filter)
-  }, [entries, filter])
+  const startMovement = (type: MovementType) => {
+    setForm({ productId: products[0]?.id ?? 0, quantity: 1, reason: reasons[type][0] })
+    setOpen(true)
+  }
 
-  const totalUnits = entries.reduce((sum, entry) => sum + entry.quantity, 0)
-  const productionCount = entries.filter((e) => e.type === 'Producción').reduce((sum, e) => sum + e.quantity, 0)
-  const purchaseCount = entries.filter((e) => e.type === 'Compra').reduce((sum, e) => sum + e.quantity, 0)
-
-  const handleSubmit = (event: React.FormEvent) => {
+  const submit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.product.trim() || Number(form.quantity) <= 0) return
-
-    const matchedProduct = products.find((p) => p.name === form.product)
-
-    const nextEntry: InventoryEntry = {
-      id: Date.now(),
-      product: form.product.trim(),
-      sku: matchedProduct?.sku || 'VEL-IN',
-      quantity: Number(form.quantity),
-      type: form.type,
-      date: form.date,
-      note: form.note.trim() || 'Ingreso registrado en taller',
-      supplier: form.supplier.trim() || (form.type === 'Producción' ? 'Taller Central' : 'Proveedor'),
+    if (!form.productId || form.quantity <= 0) {
+      error('Selecciona un producto e ingresa una cantidad mayor a cero.', 'Datos incompletos')
+      return
     }
-
-    setEntries((current) => [nextEntry, ...current])
-    success(`Ingreso de ${form.quantity} unidades de "${form.product}" registrado`, 'Entrada Confirmada')
-    setModalOpen(false)
-    setForm({
-      product: products[0]?.name || '',
-      quantity: 10,
-      type: 'Producción',
-      date: new Date().toISOString().slice(0, 10),
-      note: '',
-      supplier: '',
-    })
+    const product = products.find((item) => item.id === form.productId)
+    if (typeForForm === 'salida' && product && form.quantity > product.stock) {
+      error(`No puedes retirar más de las ${product.stock} unidades disponibles.`, 'Stock insuficiente')
+      return
+    }
+    setSaving(true)
+    try {
+      const movement = await createInventoryMovement(form)
+      setMovements((current) => [movement, ...current.filter((item) => item.id !== movement.id)])
+      success(`${movement.type === 'entrada' ? 'Entrada' : 'Salida'} registrada correctamente.`, 'Movimiento confirmado')
+      setOpen(false)
+      void load()
+    } catch (caught) {
+      error(caught instanceof Error ? caught.message : 'No fue posible registrar el movimiento.', 'Error de inventario')
+    } finally { setSaving(false) }
   }
 
-  const handleExport = () => {
-    const rows = [
-      ['Fecha', 'Producto / Referencia', 'Cantidad', 'Tipo de Entrada', 'Origen / Proveedor', 'Notas'],
-      ...filteredEntries.map((e) => [
-        e.date,
-        `${e.product} (${e.sku || 'N/A'})`,
-        String(e.quantity),
-        e.type,
-        e.supplier || '',
-        e.note,
-      ]),
-    ]
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' })
+  const exportHistory = () => {
+    const rows = [['Fecha', 'Tipo', 'Motivo', 'Producto', 'Cantidad', 'Responsable'], ...visible.flatMap((m) => m.items.map((item) => [m.date, m.type, m.reason, item.productName, String(item.quantity), m.user]))]
+    const csv = rows.map((row) => row.map((cell) => `"${cell.replaceAll('"', '""')}"`).join(',')).join('\n')
     const link = document.createElement('a')
-    link.href = URL.createObjectURL(blob)
-    link.download = `entradas_stock_${new Date().toISOString().slice(0, 10)}.csv`
+    link.href = URL.createObjectURL(new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' }))
+    link.download = `historial_movimientos_${new Date().toISOString().slice(0, 10)}.csv`
     link.click()
-    info('Historial de entradas exportado a CSV', 'Descarga Completa')
+    URL.revokeObjectURL(link.href)
+    info('Historial exportado a CSV.', 'Descarga completa')
   }
 
-  const getBadgeClass = (type: EntryType) => {
-    switch (type) {
-      case 'Producción':
-        return 'badge-warning'
-      case 'Compra':
-        return 'badge-success'
-      case 'Ajuste':
-        return 'badge-neutral'
-      default:
-        return 'badge-danger'
-    }
-  }
-
-  return (
-    <>
-      <div className="section-header">
-        <div>
-          <h2 className="section-title">Entradas de Mercancía & Producción</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Registro de lotes elaborados en taller e insumos adquiridos
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="button" className="btn-outline" onClick={handleExport}>
-            <i className="ti ti-download" /> Exportar CSV
-          </button>
-          <button type="button" className="btn-primary" onClick={() => setModalOpen(true)}>
-            <i className="ti ti-plus" /> Registrar Entrada
-          </button>
-        </div>
+  return <>
+    <div className="section-header">
+      <div><h2 className="section-title">Entradas, Salidas e Historial</h2><span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>Trazabilidad de cada movimiento de inventario registrado</span></div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <button type="button" className="btn-outline" onClick={exportHistory}><i className="ti ti-download" /> Exportar CSV</button>
+        <button type="button" className="btn-secondary" onClick={() => startMovement('salida')}><i className="ti ti-arrow-bar-to-up" /> Registrar salida</button>
+        <button type="button" className="btn-primary" onClick={() => startMovement('entrada')}><i className="ti ti-arrow-bar-to-down" /> Registrar entrada</button>
       </div>
-
-      {/* Tarjetas de Resumen */}
-      <div className="stock-summary-grid">
-        <div className="stock-summary-card primary">
-          <div className="summary-label">Total Ingresado</div>
-          <div className="summary-value">{totalUnits}</div>
-          <div className="summary-foot">Unidades en el historial</div>
-        </div>
-        <div className="stock-summary-card success">
-          <div className="summary-label">Producción de Taller</div>
-          <div className="summary-value">{productionCount}</div>
-          <div className="summary-foot">Velas terminadas</div>
-        </div>
-        <div className="stock-summary-card warning">
-          <div className="summary-label">Compras a Proveedor</div>
-          <div className="summary-value">{purchaseCount}</div>
-          <div className="summary-foot">Insumos y lotes externos</div>
-        </div>
-      </div>
-
-      {/* Filtro por tipo de entrada */}
-      <div className="filters-row">
-        <div className="period-pills" style={{ display: 'inline-flex' }}>
-          {(['Todas', 'Producción', 'Compra', 'Ajuste', 'Devolución'] as const).map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`pill ${filter === t ? 'active' : ''}`}
-              onClick={() => setFilter(t)}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Tabla de Entradas */}
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Fecha</th>
-              <th>Vela Ingresada</th>
-              <th>Cantidad</th>
-              <th>Tipo</th>
-              <th>Origen / Proveedor</th>
-              <th>Observaciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEntries.map((item) => (
-              <tr key={item.id}>
-                <td>
-                  <span style={{ fontFamily: 'monospace', color: 'var(--text-dim)' }}>{item.date}</span>
-                </td>
-                <td>
-                  <div className="product-cell">
-                    <div className="product-thumb">📦</div>
-                    <div>
-                      <div className="product-name">{item.product}</div>
-                      {item.sku && <div className="product-sku">{item.sku}</div>}
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <strong style={{ color: 'var(--success)' }}>+{item.quantity}</strong> unid.
-                </td>
-                <td>
-                  <span className={`badge ${getBadgeClass(item.type)}`}>{item.type}</span>
-                </td>
-                <td>{item.supplier}</td>
-                <td style={{ color: 'var(--text-muted)', fontSize: '0.825rem' }}>{item.note}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal Registrar Entrada */}
-      {isModalOpen && (
-        <div className="modal-backdrop" onClick={() => setModalOpen(false)}>
-          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '520px' }}>
-            <div className="modal-header">
-              <h3 className="modal-title">Registrar Entrada de Stock</h3>
-              <button type="button" className="modal-close" onClick={() => setModalOpen(false)}>
-                <i className="ti ti-x" />
-              </button>
-            </div>
-            <form onSubmit={handleSubmit}>
-              <div className="modal-body">
-                <div className="form-group">
-                  <label className="form-label">Seleccionar Vela / Producto *</label>
-                  <select
-                    className="form-input"
-                    value={form.product}
-                    onChange={(e) => setForm({ ...form, product: e.target.value })}
-                    required
-                  >
-                    {products.map((p) => (
-                      <option key={p.id} value={p.name}>
-                        {p.name} ({p.sku}) - Stock actual: {p.stock}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Cantidad a ingresar *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      className="form-input"
-                      value={form.quantity}
-                      onChange={(e) => setForm({ ...form, quantity: Number(e.target.value) })}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Tipo de movimiento *</label>
-                    <select
-                      className="form-input"
-                      value={form.type}
-                      onChange={(e) => setForm({ ...form, type: e.target.value as EntryType })}
-                    >
-                      <option value="Producción">Producción (Taller)</option>
-                      <option value="Compra">Compra a Proveedor</option>
-                      <option value="Ajuste">Ajuste de Conteo</option>
-                      <option value="Devolución">Devolución</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="form-grid-2">
-                  <div className="form-group">
-                    <label className="form-label">Fecha de ingreso</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={form.date}
-                      onChange={(e) => setForm({ ...form, date: e.target.value })}
-                      required
-                    />
-                  </div>
-
-                  <div className="form-group">
-                    <label className="form-label">Origen / Proveedor</label>
-                    <input
-                      type="text"
-                      className="form-input"
-                      placeholder="ej. Taller Central o Proveedor"
-                      value={form.supplier}
-                      onChange={(e) => setForm({ ...form, supplier: e.target.value })}
-                    />
-                  </div>
-                </div>
-
-                <div className="form-group">
-                  <label className="form-label">Notas u observaciones</label>
-                  <textarea
-                    className="form-input"
-                    rows={2}
-                    placeholder="Número de lote, responsable o detalles..."
-                    value={form.note}
-                    onChange={(e) => setForm({ ...form, note: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="modal-header" style={{ borderTop: '1px solid var(--border)', borderBottom: 'none' }}>
-                <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
-                  Cancelar
-                </button>
-                <button type="submit" className="btn-primary">
-                  <i className="ti ti-check" /> Confirmar Entrada
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-    </>
-  )
+    </div>
+    <div className="stock-summary-grid">
+      <div className="stock-summary-card primary"><div className="summary-label">Movimientos registrados</div><div className="summary-value">{movements.length}</div><div className="summary-foot">Historial completo</div></div>
+      <div className="stock-summary-card success"><div className="summary-label">Unidades de entrada</div><div className="summary-value">+{units('entrada')}</div><div className="summary-foot">Producción y reembolsos</div></div>
+      <div className="stock-summary-card warning"><div className="summary-label">Unidades de salida</div><div className="summary-value">-{units('salida')}</div><div className="summary-foot">Daños y defectos</div></div>
+    </div>
+    <div className="filters-row"><div className="period-pills" style={{ display: 'inline-flex' }}>
+      {([['todos', 'Todos'], ['entrada', 'Entradas'], ['salida', 'Salidas']] as const).map(([value, label]) => <button key={value} type="button" className={`pill ${filter === value ? 'active' : ''}`} onClick={() => setFilter(value)}>{label}</button>)}
+    </div></div>
+    <div className="table-card"><table><thead><tr><th>Fecha</th><th>Producto</th><th>Cantidad</th><th>Tipo</th><th>Motivo</th><th>Responsable</th></tr></thead><tbody>
+      {visible.length ? visible.flatMap((movement) => movement.items.map((item) => <tr key={`${movement.id}-${item.productId}`}>
+        <td><span style={{ fontFamily: 'monospace', color: 'var(--text-dim)' }}>{formatter.format(new Date(movement.date))}</span></td>
+        <td><div className="product-cell"><div className="product-thumb">📦</div><div className="product-name">{item.productName}</div></div></td>
+        <td><strong style={{ color: movement.type === 'entrada' ? 'var(--success)' : 'var(--danger)' }}>{movement.type === 'entrada' ? '+' : '-'}{item.quantity}</strong> unid.</td>
+        <td><span className={`badge ${movement.type === 'entrada' ? 'badge-success' : 'badge-danger'}`}>{movement.type}</span></td><td>{movement.reason}</td><td>{movement.user}</td>
+      </tr>)) : <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '2rem' }}>No hay movimientos para este filtro.</td></tr>}
+    </tbody></table></div>
+    {open && <div className="modal-backdrop" onClick={() => !saving && setOpen(false)}><div className="modal-card" onClick={(event) => event.stopPropagation()} style={{ maxWidth: '520px' }}>
+      <div className="modal-header"><h3 className="modal-title">Registrar {typeForForm} de inventario</h3><button type="button" className="modal-close" disabled={saving} onClick={() => setOpen(false)}><i className="ti ti-x" /></button></div>
+      <form onSubmit={submit}><div className="modal-body">
+        <div className="form-group"><label className="form-label">Producto *</label><select className="form-input" value={form.productId} onChange={(event) => setForm({ ...form, productId: Number(event.target.value) })} required disabled={!products.length}>{products.length ? products.map((product) => <option key={product.id} value={product.id}>{product.name} ({product.sku}) — Stock: {product.stock}</option>) : <option value={0}>No hay productos disponibles</option>}</select></div>
+        <div className="form-grid-2"><div className="form-group"><label className="form-label">Tipo *</label><select className="form-input" value={typeForForm} onChange={(event) => setForm({ ...form, reason: reasons[event.target.value as MovementType][0] })}><option value="entrada">Entrada</option><option value="salida">Salida</option></select></div>
+        <div className="form-group"><label className="form-label">Motivo *</label><select className="form-input" value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value as InventoryMovementForm['reason'] })}>{reasons[typeForForm].map((reason) => <option key={reason} value={reason}>{reason}</option>)}</select></div></div>
+        <div className="form-group"><label className="form-label">Cantidad *</label><input type="number" min="1" max={typeForForm === 'salida' ? products.find((item) => item.id === form.productId)?.stock : undefined} step="1" className="form-input" value={form.quantity} onChange={(event) => setForm({ ...form, quantity: Number(event.target.value) })} required /></div>
+        <div style={{ color: 'var(--text-dim)', fontSize: '0.8rem' }}>El movimiento se guarda en este navegador y actualiza el stock de inmediato.</div>
+      </div><div className="modal-header" style={{ borderTop: '1px solid var(--border)', borderBottom: 'none' }}><button type="button" className="btn-secondary" disabled={saving} onClick={() => setOpen(false)}>Cancelar</button><button type="submit" className="btn-primary" disabled={saving || !products.length}>{saving ? 'Guardando...' : 'Confirmar movimiento'}</button></div></form>
+    </div></div>}
+  </>
 }

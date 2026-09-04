@@ -1,6 +1,8 @@
 import type {
   AuditEntry,
   DashboardData,
+  InventoryMovement,
+  InventoryMovementForm,
   Product,
   ProductForm,
   ReportData,
@@ -8,6 +10,7 @@ import type {
   StockItem,
   User,
   UserForm,
+  CatalogOption,
 } from '../types'
 import { formatCurrency } from '../utils/formatters'
 
@@ -23,7 +26,7 @@ const DEMO_PRODUCTS: Array<Record<string, unknown>> = [
 
 function getStoredProducts(): Product[] {
   try {
-    const raw = sessionStorage.getItem('velas_products')
+    const raw = localStorage.getItem('velas_products')
     if (!raw) return []
     const parsed = JSON.parse(raw) as Product[]
     return Array.isArray(parsed) ? parsed : []
@@ -33,7 +36,7 @@ function getStoredProducts(): Product[] {
 }
 
 function persistProducts(products: Product[]): void {
-  sessionStorage.setItem('velas_products', JSON.stringify(products))
+  localStorage.setItem('velas_products', JSON.stringify(products))
 }
 
 const DEMO_USERS: Array<{
@@ -70,7 +73,7 @@ const DEMO_USERS: Array<{
 
 function getStoredUsers(): User[] {
   try {
-    const raw = sessionStorage.getItem('velas_users')
+    const raw = localStorage.getItem('velas_users')
     if (!raw) return []
     const parsed = JSON.parse(raw) as User[]
     return Array.isArray(parsed) ? parsed : []
@@ -80,8 +83,25 @@ function getStoredUsers(): User[] {
 }
 
 function persistUsers(users: User[]): void {
-  sessionStorage.setItem('velas_users', JSON.stringify(users))
+  localStorage.setItem('velas_users', JSON.stringify(users))
 }
+
+const DEMO_COLORS: CatalogOption[] = [
+  { id: 1, name: 'Dorado' }, { id: 2, name: 'Rosa' }, { id: 3, name: 'Rojo' }, { id: 4, name: 'Crema' }, { id: 5, name: 'Morado' },
+]
+const DEMO_REFERENCES: CatalogOption[] = [
+  { id: 1, name: 'Velas' }, { id: 2, name: 'Aromáticas' }, { id: 3, name: 'Navideñas' }, { id: 4, name: 'Decorativas' },
+]
+
+function getStoredSales(): Sale[] {
+  try {
+    const raw = localStorage.getItem('velas_sales')
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed as Sale[] : []
+  } catch { return [] }
+}
+
+function persistSales(sales: Sale[]): void { localStorage.setItem('velas_sales', JSON.stringify(sales)) }
 
 function getDemoUser(identifier: string, password: string): User | null {
   const normalizedIdentifier = identifier.trim().toLowerCase()
@@ -204,7 +224,25 @@ function normalizeUser(raw: Record<string, unknown>): User {
     email: String(raw.correo ?? raw.email ?? raw.usuario_login ?? ''),
     role: toFrontendRole(String(raw.rol ?? raw.role ?? '')),
     estado: toFrontendStatus(String(raw.estado ?? (raw.activo === false ? 'Inactivo' : 'Activo'))),
+    username: String(raw.usuario_login ?? raw.username ?? ''),
+    phone: String(raw.telefono ?? raw.phone ?? ''),
+    address: String(raw.direccion ?? raw.address ?? ''),
+    cityId: raw.id_ciudad ? Number(raw.id_ciudad) : undefined,
+    backendRole: String(raw.rol ?? raw.role ?? ''),
   }
+}
+
+export async function fetchColors(): Promise<CatalogOption[]> {
+  return DEMO_COLORS
+}
+
+export async function fetchReferences(): Promise<CatalogOption[]> {
+  return DEMO_REFERENCES
+}
+
+export async function fetchCities(): Promise<CatalogOption[]> {
+  const cities = await apiFetch<Array<Record<string, unknown>>>('/ciudades')
+  return cities.map((city) => ({ id: Number(city.id_ciudad), name: String(city.nombre) }))
 }
 
 function normalizeProduct(raw: Record<string, unknown>): Product {
@@ -230,6 +268,8 @@ function normalizeProduct(raw: Record<string, unknown>): Product {
     colors: String(raw.color_nombre ?? raw.colors ?? 'Sin color'),
     description: String(raw.descripcion ?? raw.description ?? ''),
     status,
+    colorId: raw.id_color ? Number(raw.id_color) : undefined,
+    referenceId: raw.id_referencia ? Number(raw.id_referencia) : undefined,
   }
 }
 
@@ -463,44 +503,17 @@ export async function fetchDashboard(): Promise<DashboardData> {
 }
 
 export async function fetchProducts(): Promise<Product[]> {
-  try {
-    const products = await apiFetchAny<Array<Record<string, unknown>>>(['/products', '/productos'])
-    const normalized = products.map(normalizeProduct)
-    persistProducts(normalized)
-    return normalized
-  } catch {
-    const localProducts = getStoredProducts().length ? getStoredProducts() : DEMO_PRODUCTS.map((product) => normalizeProduct(product))
-    persistProducts(localProducts)
-    return localProducts
-  }
+  const stored = getStoredProducts()
+  if (stored.length) return stored
+  const products = DEMO_PRODUCTS.map((product) => normalizeProduct(product))
+  persistProducts(products)
+  return products
 }
 
 export async function createProduct(product: ProductForm): Promise<Product> {
-  const payload = {
-    nombre: product.name,
-    descripcion: product.description,
-    id_color: 1,
-    presentacion: (product.presentation || 'unidad').toLowerCase().replace(/\s+/g, '_'),
-    precio: Number(product.price),
-    stock_actual: Number(product.stock),
-    stock_minimo: Number(product.minStock),
-    id_referencia: 1,
-  }
-
-  try {
-    const created = await apiFetchAny<Record<string, unknown>>(['/productos', '/products'], {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-
-    const normalized = normalizeProduct(created)
-    const localProducts = getStoredProducts()
-    persistProducts([normalized, ...localProducts])
-    return normalized
-  } catch {
-    const existing = getStoredProducts()
-    const nextId = existing.length ? Math.max(...existing.map((item) => item.id)) + 1 : 1
-    const createdProduct: Product = {
+  const existing = await fetchProducts()
+  const nextId = existing.length ? Math.max(...existing.map((item) => item.id)) + 1 : 1
+  const createdProduct: Product = {
       id: nextId,
       name: product.name,
       sku: product.sku || `VEL-${nextId}`,
@@ -513,39 +526,16 @@ export async function createProduct(product: ProductForm): Promise<Product> {
       colors: product.colors,
       description: product.description,
       status: Number(product.stock) > Number(product.minStock) ? 'active' : 'inactive',
-    }
-
-    const nextProducts = [createdProduct, ...existing]
-    persistProducts(nextProducts)
-    return createdProduct
+      colorId: product.colorId,
+      referenceId: product.referenceId,
   }
+  persistProducts([createdProduct, ...existing])
+  return createdProduct
 }
 
 export async function updateProduct(id: number, product: ProductForm): Promise<Product> {
-  const payload = {
-    nombre: product.name,
-    descripcion: product.description,
-    id_color: 1,
-    presentacion: (product.presentation || 'unidad').toLowerCase().replace(/\s+/g, '_'),
-    precio: Number(product.price),
-    stock_actual: Number(product.stock),
-    stock_minimo: Number(product.minStock),
-    id_referencia: 1,
-  }
-
-  try {
-    const updated = await apiFetchAny<Record<string, unknown>>([`/productos/${id}`, `/products/${id}`], {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    })
-
-    const normalized = normalizeProduct(updated)
-    const localProducts = getStoredProducts()
-    persistProducts(localProducts.map((item) => (item.id === id ? normalized : item)))
-    return normalized
-  } catch {
-    const existing = getStoredProducts()
-    const updatedProduct: Product = {
+  const existing = await fetchProducts()
+  const updatedProduct: Product = {
       id,
       name: product.name,
       sku: product.sku || `VEL-${id}`,
@@ -558,30 +548,21 @@ export async function updateProduct(id: number, product: ProductForm): Promise<P
       colors: product.colors,
       description: product.description,
       status: Number(product.stock) > Number(product.minStock) ? 'active' : 'inactive',
-    }
-
-    persistProducts(existing.map((item) => (item.id === id ? updatedProduct : item)))
-    return updatedProduct
+      colorId: product.colorId,
+      referenceId: product.referenceId,
   }
+  persistProducts(existing.map((item) => (item.id === id ? updatedProduct : item)))
+  return updatedProduct
 }
 
 export async function deleteProduct(id: number): Promise<void> {
-  try {
-    await apiFetchAny<void>([`/productos/${id}`, `/products/${id}`], { method: 'DELETE' })
-  } catch {
-    const existing = getStoredProducts()
-    persistProducts(existing.filter((product) => product.id !== id))
-  }
+  persistProducts((await fetchProducts()).filter((product) => product.id !== id))
 }
 
 export async function fetchUsers(): Promise<User[]> {
-  try {
-    const users = await apiFetchAny<Array<Record<string, unknown>>>(['/usuarios', '/users'])
-    const normalized = users.map(normalizeUser)
-    persistUsers(normalized)
-    return normalized
-  } catch {
-    const localUsers = getStoredUsers().length ? getStoredUsers() : DEMO_USERS.map((user) => ({
+  const stored = getStoredUsers()
+  if (stored.length) return stored
+  const localUsers = DEMO_USERS.map((user) => ({
       id: user.id,
       dni: user.dni,
       name: user.name,
@@ -590,47 +571,16 @@ export async function fetchUsers(): Promise<User[]> {
       password: user.password,
       role: user.role,
       estado: user.estado,
-    }))
-
-    persistUsers(localUsers)
-    return localUsers
-  }
+  }))
+  persistUsers(localUsers)
+  return localUsers
 }
 
 export async function createUser(user: UserForm): Promise<User> {
-  const [nombre_usuario, ...rest] = (user.name || '').trim().split(/\s+/)
-  const apellidos_usuario = rest.join(' ')
   const documento = String(user.dni || Date.now() % 1000000000)
-  const usuario_login = (user.email || '').split('@')[0] || `usuario_${Date.now()}`
-
-  const payload = {
-    nombre_usuario: nombre_usuario || 'Usuario',
-    apellidos_usuario: apellidos_usuario || 'Sistema',
-    usuario_login,
-    documento,
-    rol: user.role === 'supremo' ? 'super_admin' : 'admin',
-    correo: user.email,
-    password: user.password,
-    estado: user.estado === 'inactivo' ? 'Inactivo' : 'Activo',
-    activo: user.estado !== 'inactivo',
-  }
-
-  try {
-    const created = await apiFetchAny<Record<string, unknown>>(['/usuarios', '/users'], {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    })
-
-    const normalized = normalizeUser(created)
-    const localUsers = getStoredUsers()
-    if (!localUsers.some((item) => item.id === normalized.id)) {
-      persistUsers([normalized, ...localUsers])
-    }
-    return normalized
-  } catch {
-    const existing = getStoredUsers()
-    const nextId = existing.length ? Math.max(...existing.map((item) => item.id)) + 1 : 1
-    const createdUser: User = {
+  const existing = await fetchUsers()
+  const nextId = existing.length ? Math.max(...existing.map((item) => item.id)) + 1 : 1
+  const createdUser: User = {
       id: nextId,
       dni: documento,
       name: (user.name || 'Usuario').trim() || 'Usuario',
@@ -639,42 +589,14 @@ export async function createUser(user: UserForm): Promise<User> {
       password: user.password,
       role: user.role,
       estado: user.estado,
-    }
-
-    const updatedUsers = [createdUser, ...existing]
-    persistUsers(updatedUsers)
-    return createdUser
   }
+  persistUsers([createdUser, ...existing])
+  return createdUser
 }
 
 export async function updateUser(id: number, user: UserForm): Promise<User> {
-  const [nombre_usuario, ...rest] = (user.name || '').trim().split(/\s+/)
-  const apellidos_usuario = rest.join(' ')
-
-  const payload = {
-    nombre_usuario: nombre_usuario || 'Usuario',
-    apellidos_usuario: apellidos_usuario || 'Sistema',
-    documento: user.dni || undefined,
-    correo: user.email,
-    rol: user.role === 'supremo' ? 'super_admin' : 'admin',
-    estado: user.estado === 'inactivo' ? 'Inactivo' : 'Activo',
-    activo: user.estado !== 'inactivo',
-    ...(user.password ? { password: user.password } : {}),
-  }
-
-  try {
-    const updated = await apiFetchAny<Record<string, unknown>>([`/usuarios/${id}`, `/users/${id}`], {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    })
-
-    const normalized = normalizeUser(updated)
-    const localUsers = getStoredUsers()
-    persistUsers(localUsers.map((item) => (item.id === id ? normalized : item)))
-    return normalized
-  } catch {
-    const existing = getStoredUsers()
-    const updatedUser: User = {
+  const existing = await fetchUsers()
+  const updatedUser: User = {
       id,
       dni: user.dni,
       name: (user.name || 'Usuario').trim() || 'Usuario',
@@ -683,49 +605,27 @@ export async function updateUser(id: number, user: UserForm): Promise<User> {
       password: user.password || existing.find((item) => item.id === id)?.password,
       role: user.role,
       estado: user.estado,
-    }
-
-    const nextUsers = existing.map((item) => (item.id === id ? updatedUser : item))
-    persistUsers(nextUsers)
-    return updatedUser
   }
+  persistUsers(existing.map((item) => (item.id === id ? updatedUser : item)))
+  return updatedUser
 }
 
 export async function deleteUser(id: number): Promise<void> {
-  try {
-    await apiFetchAny<void>([`/usuarios/${id}`, `/users/${id}`], { method: 'DELETE' })
-  } catch {
-    const existing = getStoredUsers()
-    persistUsers(existing.filter((user) => user.id !== id))
-  }
+  persistUsers((await fetchUsers()).filter((user) => user.id !== id))
 }
 
 export async function fetchSales(): Promise<Sale[]> {
-  try {
-    const sales = await apiFetchAny<Array<Record<string, unknown>>>(['/pedidos', '/sales'])
-
-    return sales.map((sale, index) => {
-      const details = Array.isArray(sale.detalles) ? (sale.detalles as Array<Record<string, unknown>>) : []
-      const firstDetail = details[0]
-
-      return {
-        id: Number(sale.id_pedido ?? index + 1),
-        customer: String(sale.cliente_nombre ?? 'Cliente'),
-        product: String(firstDetail?.nombre_producto ?? 'Producto'),
-        total: Number(sale.total ?? 0),
-        status: String(sale.estado_pedido ?? 'Pendiente'),
-        date: String(sale.fecha_registro ?? sale.fecha_entrega ?? new Date().toISOString().slice(0, 10)),
-      }
-    })
-  } catch {
-    return [
+  const stored = getStoredSales()
+  if (stored.length) return stored
+  const fallback = [
       { id: 1, customer: 'Distribuidora La Milagrosa', product: 'Vela Árabe Dorada', total: 420000, status: 'Completada', date: '2026-09-02' },
       { id: 2, customer: 'Comercializadora San Judas', product: 'Vela Floral Aromaterapia', total: 180000, status: 'Completada', date: '2026-09-01' },
       { id: 3, customer: 'Almacén El Centenario', product: 'Vela Navideña Estrella', total: 240000, status: 'Pendiente', date: '2026-08-31' },
       { id: 4, customer: 'Boutique Aromas & Luz', product: 'Vela Relajante Brisa', total: 156000, status: 'Completada', date: '2026-08-29' },
       { id: 5, customer: 'Parroquia San Juan', product: 'Vela Cirio Pascual', total: 310000, status: 'Completada', date: '2026-08-27' },
-    ]
-  }
+  ]
+  persistSales(fallback)
+  return fallback
 }
 
 export async function fetchStock(): Promise<StockItem[]> {
@@ -815,4 +715,50 @@ export async function fetchAudit(): Promise<AuditEntry[]> {
     module: 'Inventario',
     date: String(movement.fecha_hora ?? movement.date ?? new Date().toISOString()),
   }))
+}
+
+export async function createSale(input: { customer: string; productId: number; quantity: number; unitPrice: number; status: string; date: string }): Promise<Sale> {
+  const product = (await fetchProducts()).find((item) => item.id === input.productId)
+  if (!product) throw new Error('El producto seleccionado no existe.')
+  if (input.quantity > product.stock) throw new Error('La cantidad supera el stock disponible.')
+  const sales = await fetchSales()
+  const nextId = sales.length ? Math.max(...sales.map((sale) => sale.id)) + 1 : 1
+  const created: Sale = { id: nextId, customer: input.customer.trim(), product: product.name, total: input.quantity * input.unitPrice, status: input.status, date: input.date || new Date().toISOString().slice(0, 10) }
+  persistSales([created, ...sales])
+  persistProducts((await fetchProducts()).map((item) => item.id === product.id ? { ...item, stock: item.stock - input.quantity, status: item.stock - input.quantity > item.minStock ? 'active' : 'inactive' } : item))
+  return {
+    ...created,
+  }
+}
+
+const MOVEMENTS_STORAGE_KEY = 'velas_inventory_movements'
+
+function getStoredMovements(): InventoryMovement[] {
+  try {
+    const raw = localStorage.getItem(MOVEMENTS_STORAGE_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed as InventoryMovement[] : []
+  } catch { return [] }
+}
+
+function persistMovements(movements: InventoryMovement[]): void { localStorage.setItem(MOVEMENTS_STORAGE_KEY, JSON.stringify(movements)) }
+
+function movementTypeFromReason(reason: InventoryMovementForm['reason']): InventoryMovement['type'] {
+  return reason === 'Producción' || reason === 'Reembolso' ? 'entrada' : 'salida'
+}
+
+export async function fetchInventoryMovements(): Promise<InventoryMovement[]> {
+  return getStoredMovements()
+}
+
+export async function createInventoryMovement(form: InventoryMovementForm): Promise<InventoryMovement> {
+  const product = (await fetchProducts()).find((item) => item.id === form.productId)
+  if (!product) throw new Error('El producto seleccionado no existe.')
+  const type = movementTypeFromReason(form.reason)
+  if (type === 'salida' && form.quantity > product.stock) throw new Error('La cantidad supera el stock disponible.')
+  const movement: InventoryMovement = { id: Date.now(), type, reason: form.reason, date: new Date().toISOString(), user: 'Registro local', items: [{ productId: product.id, productName: product.name, quantity: Number(form.quantity) }] }
+  persistMovements([movement, ...getStoredMovements()])
+  const nextStock = product.stock + (type === 'entrada' ? form.quantity : -form.quantity)
+  persistProducts((await fetchProducts()).map((item) => item.id === product.id ? { ...item, stock: nextStock, status: nextStock > item.minStock ? 'active' : 'inactive' } : item))
+  return movement
 }

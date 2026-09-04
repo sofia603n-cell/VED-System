@@ -11,6 +11,11 @@ export interface User {
   password?: string
   role: UserRole
   estado: UserStatus
+  username?: string
+  phone?: string
+  address?: string
+  cityId?: number
+  backendRole?: string
 }
 
 export interface Product {
@@ -26,6 +31,8 @@ export interface Product {
   colors: string
   description: string
   status: ProductStatus
+  colorId?: number
+  referenceId?: number
 }
 
 export interface ProductForm {
@@ -40,6 +47,8 @@ export interface ProductForm {
   colors: string
   description: string
   status: ProductStatus
+  colorId?: number
+  referenceId?: number
 }
 
 export interface UserForm {
@@ -50,6 +59,15 @@ export interface UserForm {
   password?: string
   role: UserRole
   estado: UserStatus
+  username?: string
+  phone?: string
+  address?: string
+  cityId?: number
+}
+
+export interface CatalogOption {
+  id: number
+  name: string
 }
 
 export interface DashboardMetric {
@@ -128,4 +146,28 @@ export interface AuditEntry {
   action: string
   module: string
   date: string
+}
+
+export type MovementType = 'entrada' | 'salida'
+export type MovementReason = 'Producción' | 'Reembolso' | 'Venta' | 'Daño' | 'Defecto'
+
+export interface InventoryMovementItem {
+  productId: number
+  productName: string
+  quantity: number
+}
+
+export interface InventoryMovement {
+  id: number
+  type: MovementType
+  reason: MovementReason
+  date: string
+  user: string
+  items: InventoryMovementItem[]
+}
+
+export interface InventoryMovementForm {
+  productId: number
+  quantity: number
+  reason: Exclude<MovementReason, 'Venta'>
 }

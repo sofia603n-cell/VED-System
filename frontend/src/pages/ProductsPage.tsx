@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createProduct, deleteProduct, fetchProducts, updateProduct } from '../api/mockApi'
+import { createProduct, deleteProduct, fetchColors, fetchProducts, fetchReferences, updateProduct } from '../api/mockApi'
 import { ConfirmModal } from '../components/common/ConfirmModal'
 import { useToast } from '../context/ToastContext'
-import type { Product, ProductForm } from '../types'
+import type { CatalogOption, Product, ProductForm } from '../types'
 import { formatCurrency, getProductState, stateClass } from '../utils/formatters'
 
 function getStockBarPercent(product: Pick<Product, 'stock' | 'minStock'>) {
@@ -38,11 +38,18 @@ export function ProductsPage() {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState<ProductForm>(emptyProductForm())
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [colors, setColors] = useState<CatalogOption[]>([])
+  const [references, setReferences] = useState<CatalogOption[]>([])
+  const [saving, setSaving] = useState(false)
 
   const { success, warning, info } = useToast()
 
   useEffect(() => {
-    fetchProducts().then(setItems)
+    void Promise.all([fetchProducts(), fetchColors(), fetchReferences()]).then(([products, availableColors, availableReferences]) => {
+      setItems(products)
+      setColors(availableColors)
+      setReferences(availableReferences)
+    })
   }, [])
 
   const categories = useMemo(() => {
@@ -78,7 +85,7 @@ export function ProductsPage() {
   const openCreate = () => {
     setEditingId(null)
     const nextSku = `VEL-${items.length + 1}`
-    setForm({ ...emptyProductForm(), sku: nextSku })
+    setForm({ ...emptyProductForm(), sku: nextSku, colorId: colors[0]?.id, colors: colors[0]?.name || '', referenceId: references[0]?.id, category: references[0]?.name || '' })
     setModalOpen(true)
   }
 
@@ -96,16 +103,21 @@ export function ProductsPage() {
       colors: product.colors,
       description: product.description,
       status: product.status,
+      colorId: product.colorId,
+      referenceId: product.referenceId,
     })
     setModalOpen(true)
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.name || !form.sku || !form.category || form.price <= 0 || form.stock < 0) {
+    if (!form.name.trim() || !form.colorId || !form.referenceId || form.price < 0 || form.stock < 0 || form.minStock < 0) {
+      warning('Completa los campos obligatorios y selecciona valores válidos.', 'Revisa el formulario')
       return
     }
 
+    setSaving(true)
+    try {
     if (editingId !== null) {
       const updated = await updateProduct(editingId, { ...form })
       setItems((current) => current.map((item) => (item.id === editingId ? updated : item)))
@@ -116,6 +128,11 @@ export function ProductsPage() {
       success(`"${form.name}" agregado al catálogo`, 'Nuevo Producto')
     }
     setModalOpen(false)
+    } catch (caught) {
+      warning(caught instanceof Error ? caught.message : 'No fue posible guardar el producto.', 'Error al guardar')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const confirmDelete = async () => {
@@ -400,6 +417,7 @@ export function ProductsPage() {
                       placeholder="ej. Vela Árabe Dorada"
                       value={form.name}
                       onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      maxLength={150}
                       required
                     />
                   </div>
@@ -422,25 +440,26 @@ export function ProductsPage() {
                     <label className="form-label">Categoría *</label>
                     <select
                       className="form-input"
-                      value={form.category}
-                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      value={form.referenceId ?? ''}
+                      onChange={(e) => { const option = references.find((item) => item.id === Number(e.target.value)); setForm({ ...form, referenceId: option?.id, category: option?.name || '' }) }}
+                      required
                     >
-                      <option value="Velas">Velas Clásicas</option>
-                      <option value="Aromáticas">Aromáticas & Esencias</option>
-                      <option value="Navideñas">Navideñas & Temporada</option>
-                      <option value="Decorativas">Decorativas</option>
+                      <option value="">Selecciona una referencia</option>
+                      {references.map((reference) => <option key={reference.id} value={reference.id}>{reference.name}</option>)}
                     </select>
                   </div>
 
                   <div className="form-group">
                     <label className="form-label">Color *</label>
-                    <input
-                      type="text"
+                    <select
                       className="form-input"
-                      placeholder="ej. Blanco, Dorado, Miel"
-                      value={form.colors}
-                      onChange={(e) => setForm({ ...form, colors: e.target.value })}
-                    />
+                      value={form.colorId ?? ''}
+                      onChange={(e) => { const option = colors.find((item) => item.id === Number(e.target.value)); setForm({ ...form, colorId: option?.id, colors: option?.name || '' }) }}
+                      required
+                    >
+                      <option value="">Selecciona un color</option>
+                      {colors.map((color) => <option key={color.id} value={color.id}>{color.name}</option>)}
+                    </select>
                   </div>
                 </div>
 
@@ -505,6 +524,7 @@ export function ProductsPage() {
                     placeholder="Detalles sobre cera, mecha, aroma y presentación..."
                     value={form.description}
                     onChange={(e) => setForm({ ...form, description: e.target.value })}
+                    maxLength={255}
                   />
                 </div>
               </div>
@@ -513,8 +533,8 @@ export function ProductsPage() {
                 <button type="button" className="btn-secondary" onClick={() => setModalOpen(false)}>
                   Cancelar
                 </button>
-                <button type="submit" className="btn-primary">
-                  <i className="ti ti-device-floppy" /> {editingId ? 'Guardar Cambios' : 'Crear Producto'}
+                <button type="submit" className="btn-primary" disabled={saving || !colors.length || !references.length}>
+                  <i className="ti ti-device-floppy" /> {saving ? 'Guardando...' : editingId ? 'Guardar Cambios' : 'Crear Producto'}
                 </button>
               </div>
             </form>

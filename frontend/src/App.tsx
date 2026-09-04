@@ -317,7 +317,7 @@ function titleFromPath(pathname: string): { title: string; sub: string } {
     '/dashboard': { title: 'Panel de Control', sub: 'Métricas generales y rendimiento de fábrica' },
     '/productos': { title: 'Catálogo de Velas', sub: 'Administración de productos, colores y presentaciones' },
     '/stock': { title: 'Control de Stock', sub: 'Supervisión de existencias y alertas de reposición' },
-    '/entradas': { title: 'Entradas de Inventario', sub: 'Ingreso de mercancía y materias primas' },
+    '/entradas': { title: 'Movimientos de Inventario', sub: 'Entradas, salidas e historial de existencias' },
     '/ventas': { title: 'Registro de Ventas', sub: 'Gestión de pedidos, clientes y facturación' },
     '/reportes': { title: 'Reportes y Analítica', sub: 'Rendimiento comercial y rentabilidad' },
     '/usuarios': { title: 'Gestión de Usuarios', sub: 'Control de accesos y roles del personal' },
