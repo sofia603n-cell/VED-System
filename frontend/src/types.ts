@@ -1,4 +1,4 @@
-﻿export type UserRole = 'normal' | 'supremo'
+export type UserRole = 'normal' | 'supremo'
 export type UserStatus = 'activo' | 'inactivo'
 export type ProductStatus = 'active' | 'inactive'
 
@@ -47,7 +47,7 @@ export interface UserForm {
   name: string
   initials: string
   email: string
-  password: string
+  password?: string
   role: UserRole
   estado: UserStatus
 }
@@ -106,6 +106,7 @@ export interface StockItem {
   category: string
   stock: number
   minStock: number
+  sku?: string
 }
 
 export interface ReportRow {
@@ -113,6 +114,7 @@ export interface ReportRow {
   income: number
   profit: number
   margin: number
+  salesCount?: number
 }
 
 export interface ReportData {
