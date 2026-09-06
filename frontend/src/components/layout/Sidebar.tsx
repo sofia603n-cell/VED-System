@@ -54,12 +54,13 @@ export function Sidebar({ user, onLogout, isOpen, onClose }: SidebarProps) {
           <NavLink to="/entradas" label="Movimientos e Historial" icon="ti-arrows-exchange" onClick={onClose} />
 
           <div className="nav-section-label">Ventas</div>
-          <NavLink to="/ventas" label="Ventas" icon="ti-shopping-bag" onClick={onClose} />
+          <NavLink to="/ventas" label="Ventas y Pedidos" icon="ti-shopping-bag" onClick={onClose} />
           <NavLink to="/reportes" label="Reportes" icon="ti-chart-bar" onClick={onClose} />
 
           <div className="nav-section-label">Sistema</div>
           <NavLink to="/usuarios" label="Usuarios" icon="ti-users" onClick={onClose} />
           <NavLink to="/auditoria" label="Auditoría" icon="ti-clipboard-list" onClick={onClose} />
+          <NavLink to="/auditoria-clientes" label="Auditoría de Clientes" icon="ti-user-search" onClick={onClose} />
         </nav>
 
         <div className="sidebar-footer">

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createSale, fetchProducts, fetchSales } from '../api/mockApi'
+import { createSale, fetchPedidos, fetchProducts, fetchSales, fetchSalesFunnel } from '../api/mockApi'
+import { FunnelBoard } from '../components/sales/FunnelBoard'
+import { OrdersBoard } from '../components/sales/OrdersBoard'
 import { useToast } from '../context/ToastContext'
-import type { Product, Sale } from '../types'
+import type { CustomerOrder, Product, Sale, SalesFunnelData } from '../types'
 import { formatCurrency } from '../utils/formatters'
 
 interface SaleRecord extends Sale {
@@ -10,8 +12,13 @@ interface SaleRecord extends Sale {
   unitPrice?: number
 }
 
+type SalesTab = 'embudo' | 'pedidos' | 'ventas'
+
 export function SalesPage() {
+  const [tab, setTab] = useState<SalesTab>('embudo')
   const [sales, setSales] = useState<SaleRecord[]>([])
+  const [orders, setOrders] = useState<CustomerOrder[]>([])
+  const [funnel, setFunnel] = useState<SalesFunnelData | null>(null)
   const [products, setProducts] = useState<Product[]>([])
   const [isModalOpen, setModalOpen] = useState(false)
   const [receiptSale, setReceiptSale] = useState<SaleRecord | null>(null)
@@ -32,18 +39,22 @@ export function SalesPage() {
   })
 
   useEffect(() => {
-    Promise.all([fetchSales(), fetchProducts()]).then(([salesData, productsData]) => {
-      setSales(salesData)
-      setProducts(productsData)
-      if (productsData.length > 0) {
-        setForm((prev) => ({
-          ...prev,
-          productId: productsData[0].id,
-          productName: productsData[0].name,
-          unitPrice: productsData[0].price,
-        }))
-      }
-    })
+    Promise.all([fetchSales(), fetchProducts(), fetchPedidos(), fetchSalesFunnel()]).then(
+      ([salesData, productsData, ordersData, funnelData]) => {
+        setSales(salesData)
+        setProducts(productsData)
+        setOrders(ordersData)
+        setFunnel(funnelData)
+        if (productsData.length > 0) {
+          setForm((prev) => ({
+            ...prev,
+            productId: productsData[0].id,
+            productName: productsData[0].name,
+            unitPrice: productsData[0].price,
+          }))
+        }
+      },
+    )
   }, [])
 
   const handleProductChange = (productId: number) => {
@@ -119,20 +130,40 @@ export function SalesPage() {
     <>
       <div className="section-header">
         <div>
-          <h2 className="section-title">Registro & Facturación de Ventas</h2>
+          <h2 className="section-title">Embudo, pedidos y facturación</h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Gestión comercial, despachos a clientes y comprobantes de pago
+            Visual comercial conectada a pedidos, canales y catálogo del backend
           </span>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="button" className="btn-outline" onClick={handleExportCSV}>
-            <i className="ti ti-download" /> Exportar CSV
+        <div className="period-pills" role="tablist" aria-label="Secciones de ventas">
+          <button type="button" className={`pill ${tab === 'embudo' ? 'active' : ''}`} onClick={() => setTab('embudo')}>
+            Embudo
           </button>
-          <button type="button" className="btn-primary" onClick={() => setModalOpen(true)}>
-            <i className="ti ti-plus" /> Nueva Venta
+          <button type="button" className={`pill ${tab === 'pedidos' ? 'active' : ''}`} onClick={() => setTab('pedidos')}>
+            Pedidos
+          </button>
+          <button type="button" className={`pill ${tab === 'ventas' ? 'active' : ''}`} onClick={() => setTab('ventas')}>
+            Ventas
           </button>
         </div>
+        {tab === 'ventas' ? (
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button type="button" className="btn-outline" onClick={handleExportCSV}>
+              <i className="ti ti-download" /> Exportar CSV
+            </button>
+            <button type="button" className="btn-primary" onClick={() => setModalOpen(true)}>
+              <i className="ti ti-plus" /> Nueva Venta
+            </button>
+          </div>
+        ) : null}
       </div>
+
+      {tab === 'embudo' ? (
+        funnel ? <FunnelBoard data={funnel} /> : <p style={{ color: 'var(--text-dim)' }}>Cargando embudo de ventas...</p>
+      ) : null}
+      {tab === 'pedidos' ? <OrdersBoard orders={orders} /> : null}
+      {tab === 'ventas' ? (
+        <>
 
       {/* Tarjetas de Resumen */}
       <div className="stock-summary-grid">
@@ -446,6 +477,8 @@ export function SalesPage() {
           </div>
         </div>
       )}
+        </>
+      ) : null}
     </>
   )
 }

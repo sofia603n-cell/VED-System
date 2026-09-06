@@ -41,6 +41,7 @@ export function ProductsPage() {
   const [colors, setColors] = useState<CatalogOption[]>([])
   const [references, setReferences] = useState<CatalogOption[]>([])
   const [saving, setSaving] = useState(false)
+  const [pageTab, setPageTab] = useState<'catalogo' | 'referencias'>('catalogo')
 
   const { success, warning, info } = useToast()
 
@@ -175,10 +176,30 @@ export function ProductsPage() {
         <div>
           <h2 className="section-title">Catálogo de Velas & Aromas</h2>
           <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Mostrando {filteredItems.length} de {items.length} productos registrados
+            {pageTab === 'catalogo'
+              ? `Mostrando ${filteredItems.length} de ${items.length} productos registrados`
+              : `${references.length} referencias cargadas desde la base de datos`}
           </span>
         </div>
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="period-pills" role="tablist" aria-label="Catálogo o referencias">
+            <button
+              type="button"
+              className={`pill ${pageTab === 'catalogo' ? 'active' : ''}`}
+              onClick={() => setPageTab('catalogo')}
+            >
+              Catálogo
+            </button>
+            <button
+              type="button"
+              className={`pill ${pageTab === 'referencias' ? 'active' : ''}`}
+              onClick={() => setPageTab('referencias')}
+            >
+              Referencias
+            </button>
+          </div>
+          {pageTab === 'catalogo' ? (
+            <>
           <div className="view-switcher" aria-label="Cambiar vista">
             <button
               type="button"
@@ -204,8 +225,48 @@ export function ProductsPage() {
           <button className="btn-primary" type="button" onClick={openCreate}>
             <i className="ti ti-plus" /> Nueva Vela
           </button>
+            </>
+          ) : null}
         </div>
       </div>
+
+      {pageTab === 'referencias' ? (
+        <div className="table-card">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Referencia</th>
+                <th>Velas asociadas</th>
+                <th>Stock total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {references.map((reference) => {
+                const related = items.filter(
+                  (product) => product.referenceId === reference.id || product.category === reference.name,
+                )
+                const stockTotal = related.reduce((sum, product) => sum + product.stock, 0)
+                return (
+                  <tr key={reference.id}>
+                    <td>
+                      <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-dim)' }}>
+                        #{reference.id}
+                      </span>
+                    </td>
+                    <td>
+                      <strong>{reference.name}</strong>
+                    </td>
+                    <td>{related.length}</td>
+                    <td>{stockTotal} unid.</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <>
 
       {/* Barra de Filtros */}
       <div className="filters-row">
@@ -394,6 +455,8 @@ export function ProductsPage() {
             </tbody>
           </table>
         </div>
+      )}
+        </>
       )}
 
       {/* Modal de Crear / Editar Producto */}

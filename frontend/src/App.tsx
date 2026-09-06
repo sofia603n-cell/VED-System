@@ -6,6 +6,7 @@ import { ToastContainer } from './components/common/ToastContainer'
 import { CommandPalette } from './components/common/CommandPalette'
 import { ToastProvider, useToast } from './context/ToastContext'
 import { AuditPage } from './pages/AuditPage'
+import { CustomerAuditPage } from './pages/CustomerAuditPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { EntriesPage } from './pages/EntriesPage'
 import { LoginPage } from './pages/LoginPage'
@@ -55,6 +56,7 @@ function AppRoutes() {
         <Route path="/reportes" element={<ReportsPage />} />
         <Route path="/usuarios" element={<UsersPage />} />
         <Route path="/auditoria" element={<AuditPage />} />
+        <Route path="/auditoria-clientes" element={<CustomerAuditPage />} />
       </Route>
       <Route path="*" element={<Navigate to={user ? '/dashboard' : '/login'} replace />} />
     </Routes>
@@ -318,10 +320,11 @@ function titleFromPath(pathname: string): { title: string; sub: string } {
     '/productos': { title: 'Catálogo de Velas', sub: 'Administración de productos, colores y presentaciones' },
     '/stock': { title: 'Control de Stock', sub: 'Supervisión de existencias y alertas de reposición' },
     '/entradas': { title: 'Movimientos de Inventario', sub: 'Entradas, salidas e historial de existencias' },
-    '/ventas': { title: 'Registro de Ventas', sub: 'Gestión de pedidos, clientes y facturación' },
+    '/ventas': { title: 'Embudo y Pedidos', sub: 'Canales, avance por cliente y facturación' },
     '/reportes': { title: 'Reportes y Analítica', sub: 'Rendimiento comercial y rentabilidad' },
     '/usuarios': { title: 'Gestión de Usuarios', sub: 'Control de accesos y roles del personal' },
     '/auditoria': { title: 'Auditoría del Sistema', sub: 'Historial detallado de operaciones y trazabilidad' },
+    '/auditoria-clientes': { title: 'Auditoría de Clientes', sub: 'Registro, estado y actividad comercial de clientes' },
   }
 
   return map[pathname] ?? { title: 'Panel', sub: 'Sistema Velas Estrella de David' }

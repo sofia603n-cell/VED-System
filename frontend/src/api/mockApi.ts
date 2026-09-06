@@ -7,10 +7,14 @@ import type {
   ProductForm,
   ReportData,
   Sale,
+  SalesFunnelData,
   StockItem,
   User,
   UserForm,
   CatalogOption,
+  CustomerAuditEntry,
+  CustomerOrder,
+  OrderLine,
 } from '../types'
 import { formatCurrency } from '../utils/formatters'
 
@@ -87,10 +91,10 @@ function persistUsers(users: User[]): void {
 }
 
 const DEMO_COLORS: CatalogOption[] = [
-  { id: 1, name: 'Dorado' }, { id: 2, name: 'Rosa' }, { id: 3, name: 'Rojo' }, { id: 4, name: 'Crema' }, { id: 5, name: 'Morado' },
+  { id: 1, name: 'Blanco' }, { id: 2, name: 'Rojo' }, { id: 3, name: 'Azul' }, { id: 4, name: 'Verde' }, { id: 5, name: 'Amarillo' }, { id: 6, name: 'Morado' },
 ]
 const DEMO_REFERENCES: CatalogOption[] = [
-  { id: 1, name: 'Velas' }, { id: 2, name: 'Aromáticas' }, { id: 3, name: 'Navideñas' }, { id: 4, name: 'Decorativas' },
+  { id: 1, name: 'Clásica' }, { id: 2, name: 'Aromática' }, { id: 3, name: 'Decorativa' }, { id: 4, name: 'Premium' }, { id: 5, name: 'Navideña' }, { id: 6, name: 'Religiosa' },
 ]
 
 function getStoredSales(): Sale[] {
@@ -233,10 +237,32 @@ function normalizeUser(raw: Record<string, unknown>): User {
 }
 
 export async function fetchColors(): Promise<CatalogOption[]> {
+  try {
+    const colors = await apiFetch<Array<Record<string, unknown>>>('/colores')
+    if (Array.isArray(colors) && colors.length) {
+      return colors.map((color) => ({
+        id: Number(color.id_color ?? color.id ?? 0),
+        name: String(color.nombre ?? color.name ?? 'Color'),
+      }))
+    }
+  } catch {
+    /* catálogo local si el backend no responde */
+  }
   return DEMO_COLORS
 }
 
 export async function fetchReferences(): Promise<CatalogOption[]> {
+  try {
+    const references = await apiFetch<Array<Record<string, unknown>>>('/referencias')
+    if (Array.isArray(references) && references.length) {
+      return references.map((reference) => ({
+        id: Number(reference.id_referencia ?? reference.id ?? 0),
+        name: String(reference.nombre_referencia ?? reference.name ?? 'Referencia'),
+      }))
+    }
+  } catch {
+    /* catálogo local si el backend no responde */
+  }
   return DEMO_REFERENCES
 }
 
@@ -270,6 +296,43 @@ function normalizeProduct(raw: Record<string, unknown>): Product {
     status,
     colorId: raw.id_color ? Number(raw.id_color) : undefined,
     referenceId: raw.id_referencia ? Number(raw.id_referencia) : undefined,
+  }
+}
+
+function isConnectionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : ''
+  return /failed to fetch|networkerror|load failed|network request failed/i.test(message)
+}
+
+function toBackendProduct(product: ProductForm) {
+  return {
+    nombre: product.name.trim(),
+    descripcion: product.description.trim() || null,
+    id_color: product.colorId,
+    presentacion: product.presentation,
+    precio: Number(product.price),
+    stock_actual: Number(product.stock),
+    stock_minimo: Number(product.minStock),
+    id_referencia: product.referenceId,
+  }
+}
+
+function toBackendUser(user: UserForm, includePassword: boolean) {
+  const names = user.name.trim().split(/\s+/).filter(Boolean)
+  const username = user.username?.trim() || user.email.trim().split('@')[0] || `usuario${Date.now()}`
+  return {
+    nombre_usuario: names[0] || 'Usuario',
+    apellidos_usuario: names.slice(1).join(' ') || 'Sin apellido',
+    usuario_login: username,
+    documento: user.dni.trim(),
+    correo: user.email.trim(),
+    rol: user.role === 'supremo' ? 'super_admin' : 'admin',
+    estado: user.estado === 'activo' ? 'Activo' : 'Inactivo',
+    activo: user.estado === 'activo',
+    telefono: user.phone?.trim() || null,
+    direccion: user.address?.trim() || null,
+    id_ciudad: user.cityId || null,
+    ...(includePassword || user.password?.trim() ? { password: user.password?.trim() } : {}),
   }
 }
 
@@ -319,14 +382,6 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 }
 
 export async function loginUser(identifier: string, password: string): Promise<User | null> {
-  const demoUser = getDemoUser(identifier, password)
-  if (demoUser) {
-    sessionStorage.removeItem('velas_token')
-    sessionStorage.setItem('velas_token', 'demo-token')
-    sessionStorage.setItem('velas_user', JSON.stringify(demoUser))
-    return demoUser
-  }
-
   try {
     const legacy = await apiFetch<{ id: number; dni?: string; name: string; initials?: string; email: string; password?: string; role: User['role']; estado: User['estado'] }>('/login', {
       method: 'POST',
@@ -503,6 +558,14 @@ export async function fetchDashboard(): Promise<DashboardData> {
 }
 
 export async function fetchProducts(): Promise<Product[]> {
+  try {
+    const products = await apiFetchAny<Array<Record<string, unknown>>>(['/productos', '/products'])
+    if (Array.isArray(products) && products.length) {
+      return products.map((product) => normalizeProduct(product))
+    }
+  } catch {
+    /* inventario local si el backend no responde */
+  }
   const stored = getStoredProducts()
   if (stored.length) return stored
   const products = DEMO_PRODUCTS.map((product) => normalizeProduct(product))
@@ -511,6 +574,15 @@ export async function fetchProducts(): Promise<Product[]> {
 }
 
 export async function createProduct(product: ProductForm): Promise<Product> {
+  try {
+    const created = await apiFetch<Record<string, unknown>>('/productos', {
+      method: 'POST',
+      body: JSON.stringify(toBackendProduct(product)),
+    })
+    return normalizeProduct(created)
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   const existing = await fetchProducts()
   const nextId = existing.length ? Math.max(...existing.map((item) => item.id)) + 1 : 1
   const createdProduct: Product = {
@@ -534,6 +606,15 @@ export async function createProduct(product: ProductForm): Promise<Product> {
 }
 
 export async function updateProduct(id: number, product: ProductForm): Promise<Product> {
+  try {
+    const updated = await apiFetch<Record<string, unknown>>(`/productos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(toBackendProduct(product)),
+    })
+    return normalizeProduct(updated)
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   const existing = await fetchProducts()
   const updatedProduct: Product = {
       id,
@@ -556,10 +637,22 @@ export async function updateProduct(id: number, product: ProductForm): Promise<P
 }
 
 export async function deleteProduct(id: number): Promise<void> {
+  try {
+    await apiFetch(`/productos/${id}`, { method: 'DELETE' })
+    return
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   persistProducts((await fetchProducts()).filter((product) => product.id !== id))
 }
 
 export async function fetchUsers(): Promise<User[]> {
+  try {
+    const users = await apiFetch<Array<Record<string, unknown>>>('/usuarios')
+    if (Array.isArray(users)) return users.map(normalizeUser)
+  } catch {
+    /* modo demo sin servidor */
+  }
   const stored = getStoredUsers()
   if (stored.length) return stored
   const localUsers = DEMO_USERS.map((user) => ({
@@ -577,6 +670,15 @@ export async function fetchUsers(): Promise<User[]> {
 }
 
 export async function createUser(user: UserForm): Promise<User> {
+  try {
+    const created = await apiFetch<Record<string, unknown>>('/usuarios', {
+      method: 'POST',
+      body: JSON.stringify(toBackendUser(user, true)),
+    })
+    return normalizeUser(created)
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   const documento = String(user.dni || Date.now() % 1000000000)
   const existing = await fetchUsers()
   const nextId = existing.length ? Math.max(...existing.map((item) => item.id)) + 1 : 1
@@ -595,6 +697,15 @@ export async function createUser(user: UserForm): Promise<User> {
 }
 
 export async function updateUser(id: number, user: UserForm): Promise<User> {
+  try {
+    const updated = await apiFetch<Record<string, unknown>>(`/usuarios/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(toBackendUser(user, false)),
+    })
+    return normalizeUser(updated)
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   const existing = await fetchUsers()
   const updatedUser: User = {
       id,
@@ -611,10 +722,35 @@ export async function updateUser(id: number, user: UserForm): Promise<User> {
 }
 
 export async function deleteUser(id: number): Promise<void> {
+  try {
+    await apiFetch(`/usuarios/${id}`, { method: 'DELETE' })
+    return
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   persistUsers((await fetchUsers()).filter((user) => user.id !== id))
 }
 
 export async function fetchSales(): Promise<Sale[]> {
+  try {
+    const [orders, products] = await Promise.all([
+      apiFetch<Array<Record<string, unknown>>>('/pedidos'),
+      fetchProducts(),
+    ])
+    return orders.map((order) => {
+      const normalized = normalizeOrder(order, products)
+      return {
+        id: normalized.id,
+        customer: normalized.customer,
+        product: normalized.items.map((item) => item.productName).join(', ') || 'Sin productos',
+        total: normalized.total,
+        status: normalized.status === 'Entregado' ? 'Completada' : normalized.status,
+        date: normalized.date,
+      }
+    })
+  } catch {
+    /* modo demo sin servidor */
+  }
   const stored = getStoredSales()
   if (stored.length) return stored
   const fallback = [
@@ -626,6 +762,216 @@ export async function fetchSales(): Promise<Sale[]> {
   ]
   persistSales(fallback)
   return fallback
+}
+
+function demoOrders(products: Product[]): CustomerOrder[] {
+  const byName = (name: string, fallbackIndex: number) =>
+    products.find((item) => item.name.toLowerCase().includes(name.toLowerCase())) ?? products[fallbackIndex] ?? products[0]
+
+  const classic = byName('Árabe', 0) ?? {
+    id: 1, name: 'Vela Árabe', price: 42000, stock: 1,
+  }
+  const floral = byName('Floral', 1) ?? {
+    id: 2, name: 'Vela Floral', price: 36000, stock: 21,
+  }
+  const festive = byName('Navideña', 2) ?? {
+    id: 3, name: 'Vela Navideña', price: 48000, stock: 14,
+  }
+
+  const line = (
+    product: { id: number; name: string; price: number; stock: number },
+    ordered: number,
+    prepared = 0,
+  ): OrderLine => ({
+    productId: product.id,
+    productName: product.name,
+    ordered,
+    stock: product.stock,
+    prepared,
+    unitPrice: product.price,
+    subtotal: ordered * product.price,
+  })
+
+  const multiItems = [
+    line({ id: classic.id, name: classic.name, price: classic.price, stock: 1 }, 10, 1),
+    line({ id: floral.id, name: floral.name, price: floral.price, stock: floral.stock }, 8, 4),
+    line({ id: festive.id, name: festive.name, price: festive.price, stock: festive.stock }, 5, 2),
+  ]
+
+  return [
+    {
+      id: 101,
+      customer: 'Laura Gómez',
+      seller: 'Administrador Principal',
+      canal: 'whatsapp',
+      status: 'Alistamiento',
+      paymentStatus: 'Parcial',
+      paymentType: 'Transferencia',
+      date: '2026-09-03',
+      deliveryDate: '2026-09-10',
+      total: multiItems.reduce((sum, item) => sum + item.subtotal, 0),
+      items: multiItems,
+    },
+    {
+      id: 102,
+      customer: 'Carlos Rodríguez',
+      seller: 'Administrador Principal',
+      canal: 'facebook',
+      status: 'Pendiente',
+      paymentStatus: 'Pagado',
+      paymentType: 'Transferencia',
+      date: '2026-09-02',
+      deliveryDate: '2026-09-09',
+      total: 192000,
+      items: [line({ id: festive.id, name: festive.name, price: festive.price, stock: festive.stock }, 4, 0)],
+    },
+    {
+      id: 103,
+      customer: 'Distribuidora La Milagrosa',
+      seller: 'Ana Suárez',
+      canal: 'persona',
+      status: 'Entregado',
+      paymentStatus: 'Pagado',
+      paymentType: 'Efectivo',
+      date: '2026-08-28',
+      deliveryDate: '2026-08-30',
+      total: 210000,
+      items: [
+        line({ id: classic.id, name: classic.name, price: classic.price, stock: classic.stock }, 5, 5),
+        line({ id: floral.id, name: floral.name, price: floral.price, stock: floral.stock }, 3, 3),
+      ],
+    },
+  ]
+}
+
+function normalizeOrderLine(raw: Record<string, unknown>, products: Product[]): OrderLine {
+  const productId = Number(raw.id_producto ?? raw.productId ?? 0)
+  const product = products.find((item) => item.id === productId)
+  const ordered = Number(raw.cantidad ?? raw.ordered ?? 0)
+  const unitPrice = Number(raw.precio_acordado ?? raw.unitPrice ?? product?.price ?? 0)
+  return {
+    productId,
+    productName: String(raw.nombre_producto ?? raw.productName ?? product?.name ?? 'Vela'),
+    ordered,
+    stock: Number(product?.stock ?? raw.stock ?? 0),
+    prepared: Number(raw.alistamiento ?? raw.prepared ?? 0),
+    unitPrice,
+    subtotal: Number(raw.subtotal ?? ordered * unitPrice),
+  }
+}
+
+function normalizeOrder(raw: Record<string, unknown>, products: Product[]): CustomerOrder {
+  const details = Array.isArray(raw.detalles) ? raw.detalles : Array.isArray(raw.items) ? raw.items : []
+  const items = (details as Array<Record<string, unknown>>).map((detail) => normalizeOrderLine(detail, products))
+  return {
+    id: Number(raw.id_pedido ?? raw.id ?? 0),
+    customerId: raw.id_cliente ? Number(raw.id_cliente) : undefined,
+    customer: String(raw.cliente_nombre ?? raw.customer ?? 'Cliente'),
+    seller: raw.vendedor_nombre ? String(raw.vendedor_nombre) : undefined,
+    canal: String(raw.canal ?? 'persona'),
+    status: String(raw.estado_pedido ?? raw.status ?? 'Pendiente'),
+    paymentStatus: String(raw.estado_pago ?? raw.paymentStatus ?? 'Pendiente'),
+    paymentType: String(raw.tipo_pago ?? raw.paymentType ?? 'Efectivo'),
+    date: String(raw.fecha_registro ?? raw.date ?? new Date().toISOString().slice(0, 10)),
+    deliveryDate: raw.fecha_entrega ? String(raw.fecha_entrega) : undefined,
+    total: Number(raw.total ?? items.reduce((sum, item) => sum + item.subtotal, 0)),
+    items,
+  }
+}
+
+export async function fetchPedidos(): Promise<CustomerOrder[]> {
+  const products = await fetchProducts().catch(() => DEMO_PRODUCTS.map((product) => normalizeProduct(product)))
+  try {
+    const pedidos = await apiFetchAny<Array<Record<string, unknown>>>(['/pedidos', '/sales'])
+    if (Array.isArray(pedidos) && pedidos.length && (pedidos[0].detalles || pedidos[0].items || pedidos[0].id_pedido)) {
+      return pedidos.map((pedido) => normalizeOrder(pedido, products))
+    }
+  } catch {
+    /* pedidos locales si el backend no responde */
+  }
+  return demoOrders(products)
+}
+
+export async function fetchSalesFunnel(): Promise<SalesFunnelData> {
+  type FunnelChannelLike = SalesFunnelData['channels'][number]
+  const orders = await fetchPedidos()
+  const fallbackFromOrders = (): SalesFunnelData => {
+    const stageKeys = [
+      { key: 'Pendiente', label: 'Contacto / Pendiente' },
+      { key: 'Alistamiento', label: 'Alistamiento' },
+      { key: 'Entregado', label: 'Entregado' },
+    ]
+    const stages = stageKeys.map((stage) => {
+      const matched = orders.filter((order) => order.status === stage.key)
+      return {
+        key: stage.key,
+        label: stage.label,
+        count: matched.length,
+        amount: matched.reduce((sum, order) => sum + order.total, 0),
+      }
+    })
+    const channelMap = new Map<string, FunnelChannelLike>()
+    for (const order of orders) {
+      const current = channelMap.get(order.canal) ?? { canal: order.canal, orders: 0, sales: 0, amount: 0 }
+      current.orders += 1
+      current.sales += order.status === 'Entregado' ? 1 : 0
+      current.amount += order.total
+      channelMap.set(order.canal, current)
+    }
+    return {
+      stages,
+      channels: [...channelMap.values()],
+      totalOrders: orders.length,
+      totalAmount: orders.reduce((sum, order) => sum + order.total, 0),
+    }
+  }
+
+  try {
+    const [dashboard, channels] = await Promise.all([
+      apiFetch<Record<string, unknown>>('/reportes/dashboard').catch(() => ({}) as Record<string, unknown>),
+      apiFetch<Array<Record<string, unknown>>>('/reportes/ventas-por-canal').catch(() => [] as Array<Record<string, unknown>>),
+    ])
+
+    const local = fallbackFromOrders()
+    const stages = [
+      {
+        key: 'Pendiente',
+        label: 'Contacto / Pendiente',
+        count: Number(dashboard.pedidos_pendientes ?? local.stages[0]?.count ?? 0),
+        amount: local.stages[0]?.amount ?? 0,
+      },
+      {
+        key: 'Alistamiento',
+        label: 'Alistamiento',
+        count: Number(dashboard.pedidos_alistamiento ?? local.stages[1]?.count ?? 0),
+        amount: local.stages[1]?.amount ?? 0,
+      },
+      {
+        key: 'Entregado',
+        label: 'Entregado',
+        count: Number(dashboard.pedidos_entregados ?? local.stages[2]?.count ?? 0),
+        amount: local.stages[2]?.amount ?? 0,
+      },
+    ]
+
+    const mappedChannels = Array.isArray(channels) && channels.length
+      ? channels.map((channel) => ({
+          canal: String(channel.canal ?? 'canal'),
+          orders: Number(channel.cantidad_pedidos ?? 0),
+          sales: Number(channel.cantidad_ventas ?? 0),
+          amount: Number(channel.total_ventas ?? 0),
+        }))
+      : local.channels
+
+    return {
+      stages,
+      channels: mappedChannels,
+      totalOrders: Number(dashboard.total_pedidos ?? local.totalOrders),
+      totalAmount: Number(dashboard.total_ventas_monto ?? local.totalAmount),
+    }
+  } catch {
+    return fallbackFromOrders()
+  }
 }
 
 export async function fetchStock(): Promise<StockItem[]> {
@@ -640,6 +986,7 @@ export async function fetchStock(): Promise<StockItem[]> {
         category: String(normalized.referencia_nombre ?? normalized.category ?? 'General'),
         stock: Number(normalized.stock_actual ?? normalized.stock ?? 0),
         minStock: Number(normalized.stock_minimo ?? normalized.minStock ?? 0),
+        sku: String(normalized.sku ?? `VEL-${Number(normalized.id_producto ?? normalized.id ?? index + 1)}`),
       }
     })
   } catch {
@@ -649,6 +996,7 @@ export async function fetchStock(): Promise<StockItem[]> {
       category: String(product.referencia_nombre ?? 'General'),
       stock: Number(product.stock_actual ?? 0),
       minStock: Number(product.stock_minimo ?? 0),
+      sku: `VEL-${Number(product.id_producto ?? 0)}`,
     }))
 
     return fallbackProducts
@@ -717,10 +1065,107 @@ export async function fetchAudit(): Promise<AuditEntry[]> {
   }))
 }
 
+/**
+ * Construye la auditoría de clientes con los recursos existentes. No requiere
+ * endpoints, tablas ni migraciones adicionales.
+ */
+export async function fetchCustomerAudit(): Promise<CustomerAuditEntry[]> {
+  const [customersResult, ordersResult] = await Promise.allSettled([
+    apiFetch<Array<Record<string, unknown>>>('/usuarios?rol=cliente'),
+    fetchPedidos(),
+  ])
+
+  const orders = ordersResult.status === 'fulfilled' ? ordersResult.value : []
+  const customerRows = customersResult.status === 'fulfilled' && Array.isArray(customersResult.value)
+    ? customersResult.value
+    : []
+  const byCustomerId = new Map<number, CustomerOrder[]>()
+  const byCustomerName = new Map<string, CustomerOrder[]>()
+
+  for (const order of orders) {
+    if (order.customerId) {
+      byCustomerId.set(order.customerId, [...(byCustomerId.get(order.customerId) ?? []), order])
+    }
+    const key = order.customer.trim().toLocaleLowerCase()
+    byCustomerName.set(key, [...(byCustomerName.get(key) ?? []), order])
+  }
+
+  const toAuditEntry = (raw: Record<string, unknown>): CustomerAuditEntry => {
+    const id = Number(raw.id_usuario ?? raw.id ?? 0)
+    const name = toDisplayName(raw)
+    const customerOrders = byCustomerId.get(id) ?? byCustomerName.get(name.toLocaleLowerCase()) ?? []
+    const dates = customerOrders.map((order) => order.date).filter(Boolean).sort()
+    return {
+      id,
+      name,
+      document: String(raw.documento ?? raw.dni ?? 'Sin documento'),
+      email: String(raw.correo ?? raw.email ?? 'Sin correo'),
+      phone: String(raw.telefono ?? raw.phone ?? 'Sin teléfono'),
+      status: toFrontendStatus(String(raw.estado ?? (raw.activo === false ? 'Inactivo' : 'Activo'))),
+      registered: true,
+      orders: customerOrders.length,
+      totalSpent: customerOrders.reduce((total, order) => total + Number(order.total || 0), 0),
+      lastOrderDate: dates.at(-1),
+    }
+  }
+
+  if (customerRows.length) return customerRows.map(toAuditEntry)
+
+  // Si el servicio aún no está disponible, se muestran solo clientes ya
+  // presentes en pedidos visibles, sin crear ni modificar registros.
+  return [...byCustomerName.entries()].map(([name, customerOrders], index) => {
+    const dates = customerOrders.map((order) => order.date).filter(Boolean).sort()
+    return {
+      id: index + 1,
+      name: customerOrders[0]?.customer || name,
+      document: 'No disponible',
+      email: 'No disponible',
+      phone: 'No disponible',
+      status: 'activo',
+      registered: false,
+      orders: customerOrders.length,
+      totalSpent: customerOrders.reduce((total, order) => total + Number(order.total || 0), 0),
+      lastOrderDate: dates.at(-1),
+    }
+  })
+}
+
 export async function createSale(input: { customer: string; productId: number; quantity: number; unitPrice: number; status: string; date: string }): Promise<Sale> {
   const product = (await fetchProducts()).find((item) => item.id === input.productId)
   if (!product) throw new Error('El producto seleccionado no existe.')
   if (input.quantity > product.stock) throw new Error('La cantidad supera el stock disponible.')
+  try {
+    const customers = await apiFetch<Array<Record<string, unknown>>>('/usuarios?rol=cliente')
+    const requestedName = input.customer.trim().toLocaleLowerCase()
+    const customer = customers.find((item) => toDisplayName(item).toLocaleLowerCase() === requestedName)
+    if (!customer) {
+      throw new Error('El cliente debe estar registrado en la base de datos antes de crear un pedido.')
+    }
+    const order = await apiFetch<Record<string, unknown>>('/pedidos', {
+      method: 'POST',
+      body: JSON.stringify({
+        id_cliente: Number(customer.id_usuario),
+        porcentaje: 0,
+        estado_pedido: input.status === 'Completada' ? 'Entregado' : 'Pendiente',
+        fecha_entrega: input.date || new Date().toISOString().slice(0, 10),
+        tipo_pago: 'Transferencia',
+        estado_pago: input.status === 'Completada' ? 'Pagado' : 'Pendiente',
+        canal: 'persona',
+        items: [{ id_producto: input.productId, cantidad: input.quantity, precio_acordado: input.unitPrice, alistamiento: 0 }],
+      }),
+    })
+    const normalized = normalizeOrder(order, [product])
+    return {
+      id: normalized.id,
+      customer: normalized.customer,
+      product: product.name,
+      total: normalized.total,
+      status: normalized.status === 'Entregado' ? 'Completada' : normalized.status,
+      date: normalized.date,
+    }
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   const sales = await fetchSales()
   const nextId = sales.length ? Math.max(...sales.map((sale) => sale.id)) + 1 : 1
   const created: Sale = { id: nextId, customer: input.customer.trim(), product: product.name, total: input.quantity * input.unitPrice, status: input.status, date: input.date || new Date().toISOString().slice(0, 10) }
@@ -748,6 +1193,23 @@ function movementTypeFromReason(reason: InventoryMovementForm['reason']): Invent
 }
 
 export async function fetchInventoryMovements(): Promise<InventoryMovement[]> {
+  try {
+    const movements = await apiFetch<Array<Record<string, unknown>>>('/inventario/movimientos')
+    return movements.map((movement, index) => ({
+      id: Number(movement.id_movimiento ?? index + 1),
+      type: String(movement.tipo_movimiento) as InventoryMovement['type'],
+      reason: String(movement.motivo) as InventoryMovement['reason'],
+      date: String(movement.fecha_hora ?? new Date().toISOString()),
+      user: String(movement.usuario_nombre ?? 'Sistema'),
+      items: Array.isArray(movement.detalles) ? movement.detalles.map((detail: Record<string, unknown>) => ({
+        productId: Number(detail.id_producto),
+        productName: String(detail.nombre_producto ?? 'Producto'),
+        quantity: Number(detail.cantidad),
+      })) : [],
+    }))
+  } catch {
+    /* modo demo sin servidor */
+  }
   return getStoredMovements()
 }
 
@@ -756,6 +1218,30 @@ export async function createInventoryMovement(form: InventoryMovementForm): Prom
   if (!product) throw new Error('El producto seleccionado no existe.')
   const type = movementTypeFromReason(form.reason)
   if (type === 'salida' && form.quantity > product.stock) throw new Error('La cantidad supera el stock disponible.')
+  try {
+    const created = await apiFetch<Record<string, unknown>>('/inventario/movimientos', {
+      method: 'POST',
+      body: JSON.stringify({
+        tipo_movimiento: type,
+        motivo: form.reason,
+        items: [{ id_producto: form.productId, cantidad: form.quantity }],
+      }),
+    })
+    return {
+      id: Number(created.id_movimiento),
+      type: String(created.tipo_movimiento) as InventoryMovement['type'],
+      reason: String(created.motivo) as InventoryMovement['reason'],
+      date: String(created.fecha_hora),
+      user: String(created.usuario_nombre ?? 'Sistema'),
+      items: Array.isArray(created.detalles) ? created.detalles.map((detail: Record<string, unknown>) => ({
+        productId: Number(detail.id_producto),
+        productName: String(detail.nombre_producto ?? product.name),
+        quantity: Number(detail.cantidad),
+      })) : [{ productId: product.id, productName: product.name, quantity: Number(form.quantity) }],
+    }
+  } catch (error) {
+    if (!isConnectionError(error)) throw error
+  }
   const movement: InventoryMovement = { id: Date.now(), type, reason: form.reason, date: new Date().toISOString(), user: 'Registro local', items: [{ productId: product.id, productName: product.name, quantity: Number(form.quantity) }] }
   persistMovements([movement, ...getStoredMovements()])
   const nextStock = product.stock + (type === 'entrada' ? form.quantity : -form.quantity)

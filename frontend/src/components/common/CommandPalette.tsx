@@ -20,10 +20,11 @@ const COMMANDS: CommandItem[] = [
   { id: 'prod', title: 'Catálogo de Productos', category: 'Navegación', icon: 'ti-candle', path: '/productos' },
   { id: 'stock', title: 'Control de Stock e Inventario', category: 'Navegación', icon: 'ti-package', path: '/stock' },
   { id: 'entradas', title: 'Entradas de Mercancía', category: 'Navegación', icon: 'ti-arrow-bar-to-down', path: '/entradas' },
-  { id: 'ventas', title: 'Registro de Ventas', category: 'Navegación', icon: 'ti-shopping-bag', path: '/ventas' },
+  { id: 'ventas', title: 'Embudo, Pedidos y Ventas', category: 'Navegación', icon: 'ti-shopping-bag', path: '/ventas' },
   { id: 'reportes', title: 'Reportes y Estadísticas', category: 'Navegación', icon: 'ti-chart-bar', path: '/reportes' },
   { id: 'usuarios', title: 'Gestión de Usuarios', category: 'Navegación', icon: 'ti-users', path: '/usuarios' },
   { id: 'auditoria', title: 'Auditoría del Sistema', category: 'Navegación', icon: 'ti-clipboard-list', path: '/auditoria' },
+  { id: 'auditoria-clientes', title: 'Auditoría de Clientes', category: 'Navegación', icon: 'ti-user-search', path: '/auditoria-clientes' },
   { id: 'act-sale', title: 'Registrar nueva venta', category: 'Acciones', icon: 'ti-plus', path: '/ventas' },
   { id: 'act-prod', title: 'Crear nuevo producto', category: 'Acciones', icon: 'ti-candle', path: '/productos' },
   { id: 'act-entry', title: 'Registrar entrada de stock', category: 'Acciones', icon: 'ti-box', path: '/entradas' },
@@ -128,4 +129,3 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({ isOpen, onClose 
     </div>
   )
 }
-

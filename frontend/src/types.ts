@@ -118,6 +118,52 @@ export interface Sale {
   date: string
 }
 
+export interface OrderLine {
+  productId: number
+  productName: string
+  ordered: number
+  stock: number
+  prepared: number
+  unitPrice: number
+  subtotal: number
+}
+
+export interface CustomerOrder {
+  id: number
+  customerId?: number
+  customer: string
+  seller?: string
+  canal: string
+  status: string
+  paymentStatus: string
+  paymentType: string
+  date: string
+  deliveryDate?: string
+  total: number
+  items: OrderLine[]
+}
+
+export interface FunnelStage {
+  key: string
+  label: string
+  count: number
+  amount: number
+}
+
+export interface FunnelChannel {
+  canal: string
+  orders: number
+  sales: number
+  amount: number
+}
+
+export interface SalesFunnelData {
+  stages: FunnelStage[]
+  channels: FunnelChannel[]
+  totalOrders: number
+  totalAmount: number
+}
+
 export interface StockItem {
   id: number
   name: string
@@ -146,6 +192,19 @@ export interface AuditEntry {
   action: string
   module: string
   date: string
+}
+
+export interface CustomerAuditEntry {
+  id: number
+  name: string
+  document: string
+  email: string
+  phone: string
+  status: UserStatus
+  registered: boolean
+  orders: number
+  totalSpent: number
+  lastOrderDate?: string
 }
 
 export type MovementType = 'entrada' | 'salida'
