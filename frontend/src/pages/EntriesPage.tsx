@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { createInventoryEntry, fetchProducts } from '../api/mockApi'
+import type { Product } from '../types'
 
-type EntryType = 'Compra' | 'Ajuste' | 'Producción' | 'Devolución'
+type EntryType = 'Producción' | 'Reembolso'
 
 interface InventoryEntry {
   id: number
@@ -12,15 +14,17 @@ interface InventoryEntry {
 }
 
 const initialEntries: InventoryEntry[] = [
-  { id: 1, product: 'Vela Lavanda & Vainilla', quantity: 40, type: 'Compra', date: '2026-08-24', note: 'Pedido de proveedor' },
-  { id: 2, product: 'Vela Coco & Sándalo', quantity: 25, type: 'Ajuste', date: '2026-08-22', note: 'Ajuste de inventario' },
+  { id: 1, product: 'Vela Lavanda & Vainilla', quantity: 40, type: 'Producción', date: '2026-08-24', note: 'Pedido de proveedor' },
+  { id: 2, product: 'Vela Coco & Sándalo', quantity: 25, type: 'Reembolso', date: '2026-08-22', note: 'Ajuste de inventario' },
   { id: 3, product: 'Vela Eucalipto Natural', quantity: 18, type: 'Producción', date: '2026-08-20', note: 'Lote de producción 06' },
-  { id: 4, product: 'Vela Naranja & Madera', quantity: 8, type: 'Devolución', date: '2026-08-18', note: 'Devolución de cliente' },
+  { id: 4, product: 'Vela Naranja & Madera', quantity: 8, type: 'Reembolso', date: '2026-08-18', note: 'Devolución de cliente' },
 ]
 
 function emptyEntryForm() {
   return {
     product: '',
+    productId: '',
+    reference: '',
     quantity: 1,
     type: 'Compra' as EntryType,
     date: new Date().toISOString().slice(0, 10),
@@ -30,8 +34,23 @@ function emptyEntryForm() {
 
 export function EntriesPage() {
   const [entries, setEntries] = useState<InventoryEntry[]>(initialEntries)
+  const [products, setProducts] = useState<Product[]>([])
   const [filter, setFilter] = useState<'Todas' | EntryType>('Todas')
   const [form, setForm] = useState(emptyEntryForm())
+
+  useEffect(() => {
+    fetchProducts().then(setProducts)
+  }, [])
+
+  const references = useMemo(
+    () => [...new Set(products.map((product) => product.category).filter(Boolean))],
+    [products],
+  )
+
+  const referenceProducts = useMemo(
+    () => products.filter((product) => !form.reference || product.category === form.reference),
+    [products, form.reference],
+  )
 
   const filteredEntries = useMemo(() => {
     if (filter === 'Todas') return entries
@@ -40,21 +59,32 @@ export function EntriesPage() {
 
   const totalUnits = entries.reduce((sum, entry) => sum + entry.quantity, 0)
 
-  const handleSubmit = (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.product.trim() || Number(form.quantity) <= 0) return
+    if (!form.productId || Number(form.quantity) <= 0) return
 
-    const nextEntry: InventoryEntry = {
-      id: Date.now(),
-      product: form.product.trim(),
-      quantity: Number(form.quantity),
-      type: form.type,
-      date: form.date,
-      note: form.note.trim() || 'Registro manual',
+    try {
+      await createInventoryEntry({
+        productId: Number(form.productId),
+        quantity: Number(form.quantity),
+        type: form.type,
+      })
+
+      const nextEntry: InventoryEntry = {
+        id: Date.now(),
+        product: form.product,
+        quantity: Number(form.quantity),
+        type: form.type,
+        date: form.date,
+        note: form.note.trim() || 'Registro manual',
+      }
+
+      setEntries((current) => [nextEntry, ...current])
+      setForm(emptyEntryForm())
+      setProducts(await fetchProducts())
+    } catch {
+      window.alert('No se pudo registrar la entrada. Verifica el producto y que el backend esté activo.')
     }
-
-    setEntries((current) => [nextEntry, ...current])
-    setForm(emptyEntryForm())
   }
 
   return (
@@ -71,12 +101,12 @@ export function EntriesPage() {
         </div>
         <div className="entry-summary-card success">
           <span><i className="ti ti-plus" /> Compras</span>
-          <strong>{entries.filter((entry) => entry.type === 'Compra').length}</strong>
+          <strong>{entries.filter((entry) => entry.type === 'Producción').length}</strong>
           <small>En este período</small>
         </div>
         <div className="entry-summary-card warning">
           <span><i className="ti ti-adjustments-alt" /> Ajustes</span>
-          <strong>{entries.filter((entry) => entry.type === 'Ajuste').length}</strong>
+          <strong>{entries.filter((entry) => entry.type === 'Reembolso').length}</strong>
           <small>Revisión de stock</small>
         </div>
       </div>
@@ -89,7 +119,7 @@ export function EntriesPage() {
               <div className="card-sub">Últimas entradas registradas</div>
             </div>
             <div className="period-pills small">
-              {(['Todas', 'Compra', 'Ajuste', 'Producción', 'Devolución'] as const).map((type) => (
+              {(['Todas', 'Producción', 'Reembolso'] as const).map((type) => (
                 <button
                   key={type}
                   type="button"
@@ -116,7 +146,7 @@ export function EntriesPage() {
                 <tr key={entry.id}>
                   <td>{entry.product}</td>
                   <td><strong>{entry.quantity}</strong></td>
-                  <td><span className={`badge ${entry.type === 'Compra' ? 'badge-success' : entry.type === 'Ajuste' ? 'badge-warning' : entry.type === 'Devolución' ? 'badge-danger' : 'badge-neutral'}`}>{entry.type}</span></td>
+                  <td><span className={`badge ${entry.type === 'Producción' ? 'badge-success' : 'badge-warning'}`}>{entry.type}</span></td>
                   <td>{entry.date}</td>
                   <td>{entry.note}</td>
                 </tr>
@@ -129,8 +159,31 @@ export function EntriesPage() {
           <div className="card-title">Registrar entrada</div>
           <form onSubmit={handleSubmit} className="entry-form">
             <div className="form-group">
+              <label className="form-label">Referencia</label>
+              <select
+                className="form-input"
+                value={form.reference}
+                onChange={(event) => setForm({ ...form, reference: event.target.value, productId: '', product: '' })}
+              >
+                <option value="">Todas las referencias</option>
+                {references.map((reference) => <option key={reference} value={reference}>{reference}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
               <label className="form-label">Producto</label>
-              <input className="form-input" value={form.product} onChange={(event) => setForm({ ...form, product: event.target.value })} placeholder="Nombre del producto" />
+              <select
+                className="form-input"
+                value={form.productId}
+                onChange={(event) => {
+                  const product = products.find((item) => item.id === Number(event.target.value))
+                  setForm({ ...form, productId: event.target.value, product: product?.name || '' })
+                }}
+              >
+                <option value="">Selecciona un producto</option>
+                {referenceProducts.map((product) => (
+                  <option key={product.id} value={product.id}>{product.name} · {product.category}</option>
+                ))}
+              </select>
             </div>
             <div className="form-row">
               <div className="form-group">
@@ -140,10 +193,8 @@ export function EntriesPage() {
               <div className="form-group">
                 <label className="form-label">Tipo</label>
                 <select className="form-input" value={form.type} onChange={(event) => setForm({ ...form, type: event.target.value as EntryType })}>
-                  <option value="Compra">Compra</option>
-                  <option value="Ajuste">Ajuste</option>
                   <option value="Producción">Producción</option>
-                  <option value="Devolución">Devolución</option>
+                  <option value="Reembolso">Reembolso</option>
                 </select>
               </div>
             </div>

@@ -99,27 +99,6 @@ function persistUsers(users: User[]): void {
   sessionStorage.setItem('velas_users', JSON.stringify(users))
 }
 
-function getDemoUser(identifier: string, password: string): User | null {
-  const normalizedIdentifier = identifier.trim().toLowerCase()
-  const user = DEMO_USERS.find((demoUser) => {
-    const matchesIdentifier = [demoUser.dni, demoUser.email].some((value) => value.toLowerCase() === normalizedIdentifier)
-    return matchesIdentifier && demoUser.password === password
-  })
-
-  if (!user) return null
-
-  return {
-    id: user.id,
-    dni: user.dni,
-    name: user.name,
-    initials: user.initials,
-    email: user.email,
-    password: user.password,
-    role: user.role,
-    estado: user.estado,
-  }
-}
-
 function getStoredToken(): string {
   return sessionStorage.getItem('velas_token') || ''
 }
@@ -305,26 +284,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 }
 
 export async function loginUser(identifier: string, password: string): Promise<User | null> {
-  const demoUser = getDemoUser(identifier, password)
-  if (demoUser) {
-    sessionStorage.removeItem('velas_token')
-    sessionStorage.setItem('velas_token', 'demo-token')
-    sessionStorage.setItem('velas_user', JSON.stringify(demoUser))
-    return demoUser
-  }
-
   try {
-    const legacy = await apiFetch<{ id: number; dni?: string; name: string; initials?: string; email: string; password?: string; role: User['role']; estado: User['estado'] }>('/login', {
-      method: 'POST',
-      body: JSON.stringify({ dni: identifier.trim(), password }),
-    }).catch(() => null)
-
-    if (legacy) {
-      sessionStorage.removeItem('velas_token')
-      sessionStorage.setItem('velas_user', JSON.stringify(legacy))
-      return legacy
-    }
-
     const data = await apiFetch<{ access_token: string; token_type: string; user: Record<string, unknown> }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ usuario_login: identifier.trim(), password }),
@@ -335,13 +295,6 @@ export async function loginUser(identifier: string, password: string): Promise<U
     sessionStorage.setItem('velas_user', JSON.stringify(user))
     return user
   } catch (error) {
-    const fallbackUser = getDemoUser(identifier, password)
-    if (fallbackUser) {
-      sessionStorage.setItem('velas_token', 'demo-token')
-      sessionStorage.setItem('velas_user', JSON.stringify(fallbackUser))
-      return fallbackUser
-    }
-
     throw error
   }
 }
@@ -505,12 +458,12 @@ export async function createProduct(product: ProductForm): Promise<Product> {
   const payload = {
     nombre: product.name,
     descripcion: product.description,
-    id_color: 1,
+    id_color: product.colorId || 1,
     presentacion: (product.presentation || 'unidad').toLowerCase().replace(/\s+/g, '_'),
     precio: Number(product.price),
     stock_actual: Number(product.stock),
     stock_minimo: Number(product.minStock),
-    id_referencia: 1,
+    id_referencia: product.referenceId || 1,
   }
 
   try {
@@ -551,12 +504,12 @@ export async function updateProduct(id: number, product: ProductForm): Promise<P
   const payload = {
     nombre: product.name,
     descripcion: product.description,
-    id_color: 1,
+    id_color: product.colorId || 1,
     presentacion: (product.presentation || 'unidad').toLowerCase().replace(/\s+/g, '_'),
     precio: Number(product.price),
     stock_actual: Number(product.stock),
     stock_minimo: Number(product.minStock),
-    id_referencia: 1,
+    id_referencia: product.referenceId || 1,
   }
 
   try {
@@ -743,7 +696,11 @@ export async function deleteUser(id: number): Promise<void> {
 
 export async function fetchReferences(): Promise<Array<{ id: number; nombre_referencia: string }>> {
   try {
-    return await apiFetchAny<Array<{ id: number; nombre_referencia: string }>>(['/referencias'])
+    const references = await apiFetchAny<Array<{ id_referencia: number; nombre_referencia: string }>>(['/referencias'])
+    return references.map((reference) => ({
+      id: reference.id_referencia,
+      nombre_referencia: reference.nombre_referencia,
+    }))
   } catch {
     return []
   }
@@ -751,10 +708,44 @@ export async function fetchReferences(): Promise<Array<{ id: number; nombre_refe
 
 export async function fetchColors(): Promise<Array<{ id: number; nombre: string }>> {
   try {
-    return await apiFetchAny<Array<{ id: number; nombre: string }>>(['/colores'])
+    const colors = await apiFetchAny<Array<{ id_color: number; nombre: string }>>(['/colores'])
+    return colors.map((color) => ({
+      id: color.id_color,
+      nombre: color.nombre,
+    }))
   } catch {
     return []
   }
+}
+
+export async function createInventoryEntry(payload: {
+  productId: number
+  quantity: number
+  type: 'Producción' | 'Reembolso'
+}): Promise<void> {
+  await apiFetchAny(['/inventario/movimientos'], {
+    method: 'POST',
+    body: JSON.stringify({
+      motivo: payload.type,
+      tipo_movimiento: 'entrada',
+      items: [{ id_producto: payload.productId, cantidad: payload.quantity }],
+    }),
+  })
+}
+
+export async function createInventoryExit(payload: {
+  productId: number
+  quantity: number
+  type: 'Daño' | 'Defecto'
+}): Promise<void> {
+  await apiFetchAny(['/inventario/movimientos'], {
+    method: 'POST',
+    body: JSON.stringify({
+      motivo: payload.type,
+      tipo_movimiento: 'salida',
+      items: [{ id_producto: payload.productId, cantidad: payload.quantity }],
+    }),
+  })
 }
 
 export async function createPedido(payload: {
@@ -791,6 +782,30 @@ export async function createPedido(payload: {
       name: String(detail.nombre_producto ?? 'Producto'),
       quantity: Number(detail.cantidad ?? 0),
       percentage: Number(detail.porcentaje ?? 0),
+    })),
+  }
+}
+
+export async function updatePedidoStatus(id: number, status: string): Promise<Sale> {
+  const updated = await apiFetchAny<Record<string, unknown>>([`/pedidos/${id}/estado`], {
+    method: 'PATCH',
+    body: JSON.stringify({ estado_pedido: status }),
+  })
+
+  const details = Array.isArray(updated.detalles) ? (updated.detalles as Array<Record<string, unknown>>) : []
+  const firstDetail = details[0]
+
+  return {
+    id: Number(updated.id_pedido ?? id),
+    customer: String(updated.cliente_nombre ?? 'Cliente'),
+    product: String(firstDetail?.nombre_producto ?? 'Producto'),
+    total: Number(updated.total ?? 0),
+    status: String(updated.estado_pedido ?? status),
+    date: String(updated.fecha_registro ?? updated.fecha_entrega ?? new Date().toISOString().slice(0, 10)),
+    details: details.map((detail) => ({
+      name: String(detail.nombre_producto ?? 'Producto'),
+      quantity: Number(detail.cantidad ?? 0),
+      percentage: 0,
     })),
   }
 }

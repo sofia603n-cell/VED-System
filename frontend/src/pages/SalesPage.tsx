@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createPedido, fetchProducts, fetchSales, fetchUsers } from '../api/mockApi'
+import { createPedido, fetchProducts, fetchSales, fetchUsers, updatePedidoStatus } from '../api/mockApi'
 import type { Product, Sale, User } from '../types'
 import { formatCurrency } from '../utils/formatters'
 
@@ -38,13 +38,19 @@ function getLinePercentage(product: Product | undefined, quantity: number): numb
 
 function getAvailabilityWidth(percentage: number): number {
   if (!Number.isFinite(percentage) || percentage <= 0) return 0
-  return Math.max(8, Math.min(100, percentage))
+  return Math.min(100, percentage)
 }
 
 function getSaleBadgeClass(status: string) {
   if (status === 'Pendiente') return 'badge-warning'
   if (status === 'Cancelada') return 'badge-danger'
   return 'badge-success'
+}
+
+function getOrderProgress(status: string): number {
+  if (status === 'Entregado') return 100
+  if (status === 'Alistamiento') return 66
+  return 33
 }
 
 export function SalesPage() {
@@ -85,6 +91,22 @@ export function SalesPage() {
 
   const removeSaleLine = (index: number) => {
     setSaleLines((current) => current.length > 1 ? current.filter((_, currentIndex) => currentIndex !== index) : [emptySaleLine()])
+  }
+
+  const handleStatusChange = async (status: string) => {
+    if (!selectedSale) return
+
+    try {
+      const updated = await updatePedidoStatus(selectedSale.id, status)
+      setSelectedSale(updated)
+      setSales((current) => current.map((sale) => sale.id === updated.id ? updated : sale))
+      if (status === 'Alistamiento') {
+        setProducts(await fetchProducts())
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Error desconocido'
+      window.alert(`No se pudo actualizar el estado del pedido: ${message}`)
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -232,6 +254,28 @@ export function SalesPage() {
         <div className="modal-overlay open" onClick={() => setSelectedSale(null)}>
           <div className="modal" onClick={(event) => event.stopPropagation()}>
             <div className="modal-title">Detalle del pedido</div>
+            <div className="order-progress">
+              <div className="stock-meter-label">
+                <span>Estado del pedido</span>
+                <small>{selectedSale.status} · {getOrderProgress(selectedSale.status)}%</small>
+              </div>
+              <div className="stock-meter">
+                <span className="stock-fill success" style={{ width: `${getOrderProgress(selectedSale.status)}%` }} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label className="form-label" htmlFor="order-status">Cambiar estado</label>
+              <select
+                id="order-status"
+                className="form-input"
+                value={selectedSale.status}
+                onChange={(event) => handleStatusChange(event.target.value)}
+              >
+                <option value="Pendiente">Pendiente</option>
+                <option value="Alistamiento">Alistamiento</option>
+                <option value="Entregado">Entregado</option>
+              </select>
+            </div>
             <div className="table-card compact-table">
               <table>
                 <thead>

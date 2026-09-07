@@ -5,7 +5,8 @@ from typing import List
 from app.models.pedido import Pedido, DetallePedido
 from app.models.producto import Producto
 from app.models.usuario import Usuario
-from app.models.enums import RolUsuario, EstadoPedido
+from app.models.movimiento import Movimiento, DetalleMovimiento
+from app.models.enums import RolUsuario, EstadoPedido, TipoMovimiento, MotivoMovimiento
 from app.schemas.pedido import PedidoCreate, PedidoResponse, DetallePedidoResponse, PedidoStatusUpdate, PedidoPagoUpdate
 from app.core.exceptions import NotFoundException, BadRequestException
 
@@ -54,6 +55,47 @@ def format_pedido_response(pedido: Pedido) -> PedidoResponse:
         total=total_val
     )
 
+def apply_stock_for_alistamiento(db: Session, pedido: Pedido) -> None:
+    existing_movement = db.query(Movimiento).filter(
+        Movimiento.id_pedido == pedido.id_pedido,
+        Movimiento.tipo_movimiento == TipoMovimiento.SALIDA,
+        Movimiento.motivo == MotivoMovimiento.VENTA
+    ).first()
+    if existing_movement:
+        return
+
+    quantities_by_product = {}
+    for detail in pedido.detalles:
+        quantities_by_product[detail.id_producto] = quantities_by_product.get(detail.id_producto, Decimal("0")) + detail.cantidad
+
+    products_by_id = {}
+    for product_id, quantity in quantities_by_product.items():
+        product = db.query(Producto).filter(Producto.id_producto == product_id).with_for_update().first()
+        if not product:
+            raise NotFoundException(f"El producto con id {product_id} no existe")
+        if product.stock_actual < quantity:
+            raise BadRequestException(
+                f"Stock insuficiente para '{product.nombre}'. Disponible: {product.stock_actual}, solicitado: {quantity}"
+            )
+        products_by_id[product_id] = product
+
+    movement = Movimiento(
+        motivo=MotivoMovimiento.VENTA,
+        tipo_movimiento=TipoMovimiento.SALIDA,
+        id_usuario=pedido.id_vendedor,
+        id_pedido=pedido.id_pedido
+    )
+    db.add(movement)
+    db.flush()
+
+    for product_id, quantity in quantities_by_product.items():
+        products_by_id[product_id].stock_actual -= quantity
+        db.add(DetalleMovimiento(
+            id_movimiento=movement.id_movimiento,
+            id_producto=product_id,
+            cantidad=quantity
+        ))
+
 def create_pedido_service(db: Session, data: PedidoCreate, default_vendedor_id: int) -> PedidoResponse:
     cliente = db.query(Usuario).filter(Usuario.id_usuario == data.id_cliente).first()
     if not cliente:
@@ -71,11 +113,6 @@ def create_pedido_service(db: Session, data: PedidoCreate, default_vendedor_id: 
     rol_vendedor = vendedor.rol.value if hasattr(vendedor.rol, "value") else str(vendedor.rol)
     if rol_vendedor not in [RolUsuario.ADMIN.value, RolUsuario.SUPER_ADMIN.value]:
         raise BadRequestException(f"El usuario con id {vendedor_id} no tiene rol administrativo de vendedor")
-
-    for item in data.items:
-        prod = db.query(Producto).filter(Producto.id_producto == item.id_producto).first()
-        if not prod:
-            raise NotFoundException(f"El producto con id {item.id_producto} no existe")
 
     try:
         nuevo_pedido = Pedido(
@@ -100,6 +137,10 @@ def create_pedido_service(db: Session, data: PedidoCreate, default_vendedor_id: 
                 precio_acordado=item.precio_acordado
             )
             db.add(det)
+
+        db.flush()
+        if nuevo_pedido.estado_pedido == EstadoPedido.ALISTAMIENTO:
+            apply_stock_for_alistamiento(db, nuevo_pedido)
 
         db.commit()
         db.refresh(nuevo_pedido)

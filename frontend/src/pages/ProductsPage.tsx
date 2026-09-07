@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { createProduct, deleteProduct, fetchProducts, fetchReferences, updateProduct } from '../api/mockApi'
+import { createProduct, deleteProduct, fetchColors, fetchProducts, fetchReferences, updateProduct } from '../api/mockApi'
 import type { Product, ProductForm } from '../types'
 import { getProductState, stateClass } from '../utils/formatters'
 import { formatCurrency } from '../utils/formatters'
@@ -8,7 +8,9 @@ function emptyProductForm(): ProductForm {
   return {
     name: '',
     sku: '',
-    category: 'Veladora',
+    category: '',
+    referenceId: undefined,
+    colorId: undefined,
     price: 0,
     stock: 0,
     minStock: 10,
@@ -23,6 +25,7 @@ function emptyProductForm(): ProductForm {
 export function ProductsPage() {
   const [items, setItems] = useState<Product[]>([])
   const [referenceOptions, setReferenceOptions] = useState<Array<{ id: number; nombre_referencia: string }>>([])
+  const [colorOptions, setColorOptions] = useState<Array<{ id: number; nombre: string }>>([])
   const [query, setQuery] = useState('')
   const [reference, setReference] = useState('')
   const [stateFilter, setStateFilter] = useState('')
@@ -35,6 +38,7 @@ export function ProductsPage() {
   useEffect(() => {
     fetchProducts().then(setItems)
     fetchReferences().then((references) => setReferenceOptions(references))
+    fetchColors().then((colors) => setColorOptions(colors))
   }, [])
 
   const filteredItems = useMemo(() => {
@@ -74,6 +78,8 @@ export function ProductsPage() {
       name: product.name,
       sku: product.sku,
       category: product.category,
+      referenceId: product.referenceId,
+      colorId: product.colorId,
       price: product.price,
       stock: product.stock,
       minStock: product.minStock,
@@ -88,7 +94,7 @@ export function ProductsPage() {
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
-    if (!form.name || !form.sku || !form.category || form.price <= 0 || form.stock < 0) {
+    if (!form.name || !form.referenceId || !form.colorId || !form.presentation || form.price < 0 || form.stock < 0 || form.minStock < 0) {
       return
     }
 
@@ -274,25 +280,37 @@ export function ProductsPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">SKU / Referencia *</label>
-                  <input
-                    type="text"
+                  <label className="form-label">Referencia *</label>
+                  <select
                     className="form-input"
-                    value={form.sku}
-                    onChange={(event) => setForm({ ...form, sku: event.target.value })}
-                  />
+                    value={form.referenceId ?? ''}
+                    onChange={(event) => {
+                      const referenceId = Number(event.target.value) || undefined
+                      const reference = referenceOptions.find((option) => option.id === referenceId)
+                      setForm({ ...form, referenceId, category: reference?.nombre_referencia || '' })
+                    }}
+                  >
+                    <option value="">Selecciona una referencia</option>
+                    {referenceOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.nombre_referencia}</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Referencia *</label>
-                  <select className="form-input" value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
-                    <option value="Veladora">Veladora</option>
-                    <option value="Veladora Especial">Veladora Especial</option>
-                    <option value="Pebetero">Pebetero</option>
-                    <option value="Vela Lisa">Vela Lisa</option>
-                    <option value="Vela Acanalada">Vela Acanalada</option>
-                    <option value="Vela Aromatizada">Vela Aromatizada</option>
-                    <option value="Vela Personalizada">Vela Personalizada</option>
-                    <option value="Parafina">Parafina</option>
+                  <label className="form-label">Color *</label>
+                  <select
+                    className="form-input"
+                    value={form.colorId ?? ''}
+                    onChange={(event) => {
+                      const colorId = Number(event.target.value) || undefined
+                      const color = colorOptions.find((option) => option.id === colorId)
+                      setForm({ ...form, colorId, colors: color?.nombre || '' })
+                    }}
+                  >
+                    <option value="">Selecciona un color</option>
+                    {colorOptions.map((option) => (
+                      <option key={option.id} value={option.id}>{option.nombre}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -326,31 +344,17 @@ export function ProductsPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Medidas</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={form.measures}
-                    onChange={(event) => setForm({ ...form, measures: event.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Presentación</label>
-                  <input
-                    type="text"
+                  <label className="form-label">Presentación *</label>
+                  <select
                     className="form-input"
                     value={form.presentation}
                     onChange={(event) => setForm({ ...form, presentation: event.target.value })}
-                  />
-                </div>
-                <div className="form-group full-span">
-                  <label className="form-label">Colores</label>
-                  <input
-                    type="text"
-                    className="form-input"
-                    value={form.colors}
-                    onChange={(event) => setForm({ ...form, colors: event.target.value })}
-                  />
+                  >
+                    <option value="">Selecciona una presentación</option>
+                    <option value="unidad">Unidad</option>
+                    <option value="paquete_x12">Paquete x12</option>
+                    <option value="paquete_x24">Paquete x24</option>
+                  </select>
                 </div>
                 <div className="form-group full-span">
                   <label className="form-label">Descripción</label>

@@ -27,19 +27,22 @@ export function LoginPage({ user, setUser }: { user: User | null; setUser: (user
       return
     }
 
-    const result = await loginUser(email.trim(), password)
-    if (!result) {
+    try {
+      const result = await loginUser(email.trim(), password)
+      if (!result) {
+        throw new Error('Usuario o contraseña incorrectos.')
+      }
+
+      sessionStorage.setItem('velas_user', JSON.stringify(result))
+      sessionStorage.setItem('loginAttempts', '0')
+      setUser(result)
+      navigate('/dashboard', { replace: true })
+    } catch {
       const nextAttempts = loginAttempts + 1
       setLoginAttempts(nextAttempts)
       sessionStorage.setItem('loginAttempts', String(nextAttempts))
       setError(nextAttempts >= maxAttempts ? 'Cuenta bloqueada por 3 intentos fallidos.' : 'Usuario o contraseña incorrectos.')
-      return
     }
-
-    sessionStorage.setItem('velas_user', JSON.stringify(result))
-    sessionStorage.setItem('loginAttempts', '0')
-    setUser(result)
-    navigate('/dashboard', { replace: true })
   }
 
   return (

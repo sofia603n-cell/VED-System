@@ -1857,6 +1857,13 @@ body[data-theme='light'] .modal {
   transition: width 0.2s ease;
 }
 
+.order-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 4px 0 18px;
+}
+
 .stock-fill.success {
   background: linear-gradient(90deg, #50c878 0%, #2fbf71 100%);
 }
