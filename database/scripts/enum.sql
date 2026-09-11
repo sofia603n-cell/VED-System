@@ -20,7 +20,8 @@ CREATE TYPE rol_usuario AS ENUM (
 CREATE TYPE estado_pedido_enum AS ENUM (
     'Pendiente',
     'Alistamiento',
-    'Entregado'
+    'Entregado',
+    'Cancelado'
 );
 
 /* Tipo de pago */

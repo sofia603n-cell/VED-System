@@ -4,20 +4,17 @@ import { ConfirmModal } from '../components/common/ConfirmModal'
 import { useToast } from '../context/ToastContext'
 import type { Sale, User, UserForm } from '../types'
 
-const DEFAULT_ACCESS = ['Hace 10 min', 'Hoy 14:20', 'Hoy 09:30', 'Ayer 18:10', 'Hace 2 días']
-
 function buildUserStats(users: User[], sales: Sale[]) {
   const byUser = new Map<number, number>()
 
   for (const sale of sales) {
-    const saleUser = Number(sale.id) % Math.max(users.length, 1)
-    byUser.set(saleUser, (byUser.get(saleUser) ?? 0) + 1)
+    if (sale.sellerId) byUser.set(sale.sellerId, (byUser.get(sale.sellerId) ?? 0) + 1)
   }
 
-  return users.map((user, index) => ({
+  return users.map((user) => ({
     ...user,
-    salesCount: byUser.get(user.id) ?? Math.max(2, (index + 2) * 3),
-    lastAccess: DEFAULT_ACCESS[index % DEFAULT_ACCESS.length],
+    salesCount: byUser.get(user.id) ?? 0,
+    lastAccess: 'Sin registro',
   }))
 }
 

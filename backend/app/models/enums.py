@@ -15,6 +15,7 @@ class EstadoPedido(str, enum.Enum):
     PENDIENTE = 'Pendiente'
     ALISTAMIENTO = 'Alistamiento'
     ENTREGADO = 'Entregado'
+    CANCELADO = 'Cancelado'
 
 class TipoPago(str, enum.Enum):
     EFECTIVO = 'Efectivo'
@@ -55,7 +56,7 @@ rol_usuario_db = ENUM(
 )
 
 estado_pedido_enum_db = ENUM(
-    'Pendiente', 'Alistamiento', 'Entregado',
+    'Pendiente', 'Alistamiento', 'Entregado', 'Cancelado',
     name='estado_pedido_enum',
     create_type=False
 )

@@ -1060,6 +1060,33 @@ body[data-theme='light'] kbd {
   font-weight: 500;
 }
 
+.charts-row-equal { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 20px; }
+.business-insights { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+.business-insight { background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-md); padding: 14px; display: grid; grid-template-columns: 26px 1fr; column-gap: 8px; align-items: center; }
+.business-insight i { grid-row: span 2; color: var(--gold); font-size: 1.25rem; }
+.business-insight span { color: var(--text-dim); font-size: .72rem; }
+.business-insight strong { color: var(--text-main); font-family: Outfit, sans-serif; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.business-insight strong.positive { color: var(--success); }
+.business-insight strong.negative { color: var(--danger); }
+
+.analytics-chart { position: relative; min-height: 270px; }
+.analytics-chart svg { width: 100%; height: 238px; overflow: visible; }
+.analytics-grid-line { stroke: var(--border); stroke-dasharray: 3 5; }
+.analytics-axis-label, .analytics-x-label { fill: var(--text-dim); font-size: 10px; }
+.analytics-area { fill: rgba(124, 77, 255, .12); }
+.analytics-line { fill: none; stroke: var(--primary); stroke-width: 3; }
+.analytics-point { cursor: pointer; }
+.analytics-point circle { fill: var(--bg-card-solid); stroke: var(--gold); stroke-width: 3; transition: r .15s; }
+.analytics-point:hover circle { r: 7; }
+.analytics-tooltip { min-height: 48px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: .78rem; color: var(--text-dim); }
+.analytics-tooltip strong { color: var(--text-main); font-size: .9rem; }
+.analytics-tooltip span { color: var(--gold); font-weight: 600; }
+.analytics-tooltip small { width: 100%; }
+.analytics-periods { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 8px; }
+.analytics-periods button { border: 1px solid var(--border); background: var(--bg-input); color: var(--text-dim); border-radius: 5px; padding: 3px 7px; font-size: .68rem; cursor: pointer; }
+.analytics-periods button.active { color: white; background: var(--primary); border-color: var(--primary); }
+.analytics-empty { min-height: 220px; display: grid; place-items: center; color: var(--text-dim); text-align: center; }
+
 /* Donut Chart */
 .donut-wrap {
   display: flex;
@@ -2267,6 +2294,11 @@ body[data-theme='light'] .stock-bar-wrap {
   :root {
     --sidebar-w: 240px;
   }
+  .business-insights { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 560px) {
+  .charts-row-equal, .business-insights { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 860px) {

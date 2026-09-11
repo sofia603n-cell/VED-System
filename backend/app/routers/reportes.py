@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List
 from app.database.connection import get_db
@@ -9,15 +9,21 @@ from app.schemas.reportes import (
     MovimientosPorUsuario,
     InventarioResumen,
     ProductoStockReporte,
+    BalancePeriodoResumen,
 )
 from app.services.reporte_service import (
     get_dashboard_summary_service,
     get_ventas_por_canal_service,
     get_movimientos_por_usuario_service,
     get_inventario_resumen_service,
+    get_balance_periodo_service,
 )
 
 router = APIRouter(prefix="/reportes", tags=["Reportes y Estadísticas"])
+
+@router.get("/balance-periodo", response_model=BalancePeriodoResumen, summary="Balance comercial por periodo")
+def reporte_balance_periodo(meses: int = Query(12, ge=1, le=24), db: Session = Depends(get_db)):
+    return get_balance_periodo_service(db, meses)
 
 @router.get(
     "/dashboard",

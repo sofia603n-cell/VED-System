@@ -1,27 +1,30 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { Sidebar } from './components/layout/Sidebar'
 import { ThemeToggle } from './components/layout/ThemeToggle'
 import { ToastContainer } from './components/common/ToastContainer'
 import { CommandPalette } from './components/common/CommandPalette'
 import { ToastProvider, useToast } from './context/ToastContext'
-import { AuditPage } from './pages/AuditPage'
-import { CustomerAuditPage } from './pages/CustomerAuditPage'
-import { DashboardPage } from './pages/DashboardPage'
-import { EntriesPage } from './pages/EntriesPage'
-import { LoginPage } from './pages/LoginPage'
-import { ProductsPage } from './pages/ProductsPage'
-import { ReportsPage } from './pages/ReportsPage'
-import { SalesPage } from './pages/SalesPage'
-import { StockPage } from './pages/StockPage'
-import { UsersPage } from './pages/UsersPage'
 import type { User } from './types'
+
+const AuditPage = lazy(() => import('./pages/AuditPage').then((module) => ({ default: module.AuditPage })))
+const CustomerAuditPage = lazy(() => import('./pages/CustomerAuditPage').then((module) => ({ default: module.CustomerAuditPage })))
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
+const EntriesPage = lazy(() => import('./pages/EntriesPage').then((module) => ({ default: module.EntriesPage })))
+const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })))
+const ProductsPage = lazy(() => import('./pages/ProductsPage').then((module) => ({ default: module.ProductsPage })))
+const ReportsPage = lazy(() => import('./pages/ReportsPage').then((module) => ({ default: module.ReportsPage })))
+const SalesPage = lazy(() => import('./pages/SalesPage').then((module) => ({ default: module.SalesPage })))
+const StockPage = lazy(() => import('./pages/StockPage').then((module) => ({ default: module.StockPage })))
+const UsersPage = lazy(() => import('./pages/UsersPage').then((module) => ({ default: module.UsersPage })))
 
 function App() {
   return (
     <ToastProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <Suspense fallback={<div className="route-loading" role="status">Cargando...</div>}>
+          <AppRoutes />
+        </Suspense>
         <ToastContainer />
       </BrowserRouter>
     </ToastProvider>
@@ -42,6 +45,12 @@ function AppRoutes() {
     document.body.dataset.theme = isLightMode ? 'light' : 'dark'
     localStorage.setItem('velas_theme', isLightMode ? 'light' : 'dark')
   }, [isLightMode])
+
+  useEffect(() => {
+    const handleExpiredSession = () => setUser(null)
+    window.addEventListener('auth:expired', handleExpiredSession)
+    return () => window.removeEventListener('auth:expired', handleExpiredSession)
+  }, [])
 
   return (
     <Routes>
@@ -83,32 +92,14 @@ function ProtectedLayout({
   const [isSettingsOpen, setSettingsOpen] = useState(false)
   const [notificationsMuted, setNotificationsMuted] = useState(false)
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      title: 'Venta completada',
-      message: 'Se registró una venta de 24 veladoras aromáticas.',
-      time: 'Hace 5 min',
-      link: '/ventas',
-      read: false,
-    },
-    {
-      id: 2,
-      title: 'Alerta de Stock',
-      message: '3 referencias han llegado a su límite de stock mínimo.',
-      time: 'Hace 25 min',
-      link: '/stock',
-      read: false,
-    },
-    {
-      id: 3,
-      title: 'Registro de Auditoría',
-      message: 'Nuevo usuario creado por el Super Administrador.',
-      time: 'Hace 1 hora',
-      link: '/auditoria',
-      read: true,
-    },
-  ])
+  const [notifications, setNotifications] = useState<Array<{
+    id: number
+    title: string
+    message: string
+    time: string
+    link: string
+    read: boolean
+  }>>([])
 
   useEffect(() => {
     setMobileMenuOpen(false)

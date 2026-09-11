@@ -5,7 +5,7 @@ import json
 import os
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = 'postgresql://postgres:admin123@localhost:5432/ved_system'
+    DATABASE_URL: str = 'postgresql://postgres:admin@localhost:5432/ved_system'
     SECRET_KEY: str = 'ved_super_secret_jwt_key_estrella_de_david_2026_change_in_production'
     ALGORITHM: str = 'HS256'
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 480

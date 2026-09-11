@@ -15,6 +15,7 @@ from app.schemas.pedido import (
 from app.services.pedido_service import (
     format_pedido_response,
     create_pedido_service,
+    update_pedido_service,
     update_pedido_status_service,
     update_pedido_pago_service
 )
@@ -81,6 +82,16 @@ def crear_pedido(
     vendedor_defecto = db.query(Usuario).filter(Usuario.rol.in_([RolUsuario.ADMIN, RolUsuario.SUPER_ADMIN])).first()
     vendedor_id = vendedor_defecto.id_usuario if vendedor_defecto else 2
     return create_pedido_service(db, data, default_vendedor_id=vendedor_id)
+
+@router.put(
+    "/{id_pedido}",
+    response_model=PedidoResponse,
+    summary="Editar un pedido y sus productos"
+)
+def editar_pedido(id_pedido: int, data: PedidoCreate, db: Session = Depends(get_db)):
+    vendedor_defecto = db.query(Usuario).filter(Usuario.rol.in_([RolUsuario.ADMIN, RolUsuario.SUPER_ADMIN])).first()
+    vendedor_id = vendedor_defecto.id_usuario if vendedor_defecto else 2
+    return update_pedido_service(db, id_pedido, data, default_vendedor_id=vendedor_id)
 
 @router.patch(
     "/{id_pedido}/estado",

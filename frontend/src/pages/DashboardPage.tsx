@@ -2,64 +2,46 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { fetchDashboard } from '../api/mockApi'
 import { MetricCard } from '../components/common/MetricCard'
+import { AnalyticsChart } from '../components/common/AnalyticsChart'
 import { LoadingState } from '../components/common/LoadingState'
 import type { DashboardData } from '../types'
 import { formatCurrency } from '../utils/formatters'
-
-const fallbackDashboardData: DashboardData = {
-  metrics: [
-    { label: 'Pedidos Realizados', value: '18', subtext: '+12% este mes', trendType: 'delta-up', icon: 'ti-shopping-cart' },
-    { label: 'Ventas Totales', value: formatCurrency(2480000), subtext: '+18% vs mes anterior', trendType: 'delta-up', icon: 'ti-cash' },
-    { label: 'Stock en Alerta', value: '3', subtext: 'Requieren reposición', trendType: 'delta-down', icon: 'ti-package' },
-    { label: 'Usuarios Activos', value: '3', subtext: 'Personal autorizado', trendType: 'delta-up', icon: 'ti-users' },
-  ],
-  salesSeries: [
-    { month: 'Ene', value: 22 },
-    { month: 'Feb', value: 35 },
-    { month: 'Mar', value: 31 },
-    { month: 'Abr', value: 48 },
-    { month: 'May', value: 56 },
-    { month: 'Jun', value: 62 },
-    { month: 'Jul', value: 68 },
-    { month: 'Ago', value: 74 },
-    { month: 'Sep', value: 72 },
-    { month: 'Oct', value: 80 },
-    { month: 'Nov', value: 88 },
-    { month: 'Dic', value: 96 },
-  ],
-  categoryShare: {
-    total: 100,
-    items: [
-      { label: 'Velas Clásicas', percent: 42, color: '#d4af37' },
-      { label: 'Aromáticas', percent: 30, color: '#7c4dff' },
-      { label: 'Navideñas & Festivas', percent: 28, color: '#3a86ff' },
-    ],
-  },
-  bestSellers: [
-    { name: 'Vela Árabe Dorada', sku: 'VEL-1', category: 'Velas Clásicas', units: 34, revenue: 1428000, trend: '+8%', trendType: 'badge-success' },
-    { name: 'Vela Floral Aromaterapia', sku: 'VEL-2', category: 'Aromáticas', units: 21, revenue: 756000, trend: '+12%', trendType: 'badge-warning' },
-    { name: 'Vela Navideña Estrella', sku: 'VEL-3', category: 'Navideñas', units: 14, revenue: 672000, trend: '+10%', trendType: 'badge-success' },
-  ],
+const emptyDashboardData: DashboardData = {
+  metrics: [],
+  salesSeries: [],
+  categoryShare: { total: 0, items: [] },
+  bestSellers: [],
 }
 
 export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [range, setRange] = useState<'6M' | '1A'>('6M')
-  const [hoveredBar, setHoveredBar] = useState<{ month: string; value: number } | null>(null)
+  const [selectedPeriod, setSelectedPeriod] = useState<{ month: string; value: number; orders: number; units: number } | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
     fetchDashboard()
       .then((res) => {
-        setData(res || fallbackDashboardData)
+        setData(res)
       })
-      .catch(() => setData(fallbackDashboardData))
+      .catch(() => setData(emptyDashboardData))
   }, [])
 
   if (!data) return <LoadingState />
 
   const chartSeries = range === '6M' ? data.salesSeries.slice(-6) : data.salesSeries
-  const maxBarValue = Math.max(...chartSeries.map((bar) => bar.value), 100)
+  const insightPeriod = selectedPeriod ?? chartSeries[chartSeries.length - 1]
+  const lowStockCount = Number(data.metrics.find((metric) => metric.label === 'Bajo stock')?.value ?? 0)
+  const businessInsights = (() => {
+    const totalValue = chartSeries.reduce((sum, item) => sum + item.value, 0)
+    const totalOrders = chartSeries.reduce((sum, item) => sum + item.orders, 0)
+    const totalUnits = chartSeries.reduce((sum, item) => sum + item.units, 0)
+    const current = chartSeries[chartSeries.length - 1]
+    const previous = chartSeries[chartSeries.length - 2]
+    const variation = previous?.value ? ((current?.value ?? 0) - previous.value) / previous.value * 100 : 0
+    const best = chartSeries.reduce<typeof chartSeries[number] | undefined>((top, item) => !top || item.value > top.value ? item : top, undefined)
+    return { totalValue, totalOrders, totalUnits, variation, best }
+  })()
   const donutGradient = data.categoryShare.items.length
     ? `conic-gradient(${data.categoryShare.items
         .map((item, index, items) => {
@@ -72,15 +54,17 @@ export function DashboardPage() {
   return (
     <>
       {/* Banner de Stock en Alerta */}
-      <div className="alert-bar" style={{ cursor: 'pointer' }} onClick={() => navigate('/stock')}>
-        <i className="ti ti-alert-triangle" style={{ fontSize: '1.2rem' }} />
-        <span style={{ flex: 1 }}>
-          <strong>Aviso de Inventario:</strong> Existen productos con stock crítico por debajo del mínimo establecido.
-        </span>
-        <span className="btn-outline" style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'transparent' }}>
-          Revisar Stock <i className="ti ti-arrow-right" />
-        </span>
-      </div>
+      {lowStockCount > 0 && (
+        <div className="alert-bar" style={{ cursor: 'pointer' }} onClick={() => navigate('/stock')}>
+          <i className="ti ti-alert-triangle" style={{ fontSize: '1.2rem' }} />
+          <span style={{ flex: 1 }}>
+            <strong>Aviso de Inventario:</strong> {lowStockCount} producto(s) tienen stock por debajo del mínimo establecido.
+          </span>
+          <span className="btn-outline" style={{ padding: '4px 10px', fontSize: '0.75rem', background: 'transparent' }}>
+            Revisar Stock <i className="ti ti-arrow-right" />
+          </span>
+        </div>
+      )}
 
       {/* Acciones Rápidas */}
       <div className="section-header" style={{ marginTop: '-8px' }}>
@@ -117,9 +101,9 @@ export function DashboardPage() {
             <div>
               <div className="card-title">Ventas & Producción</div>
               <div className="card-sub">
-                {hoveredBar
-                  ? `Mes ${hoveredBar.month}: Índice de actividad ${hoveredBar.value} pts`
-                  : 'Evolución de pedidos y volumen de ventas'}
+                {insightPeriod
+                  ? `${insightPeriod.month}: ${insightPeriod.orders} pedidos · ${insightPeriod.units} unidades · Ticket ${formatCurrency(insightPeriod.value / Math.max(1, insightPeriod.orders))}`
+                  : 'Selecciona un período para analizar pedidos y volumen'}
               </div>
             </div>
             <div className="period-pills" aria-label="Filtros de rango de ventas">
@@ -140,23 +124,14 @@ export function DashboardPage() {
             </div>
           </div>
 
-          <div className="chart-bars">
-            {chartSeries.map((bar) => (
-              <div
-                key={bar.month}
-                className="bar-group"
-                onMouseEnter={() => setHoveredBar(bar)}
-                onMouseLeave={() => setHoveredBar(null)}
-              >
-                <div
-                  className="bar"
-                  style={{ height: `${Math.max(16, (bar.value / maxBarValue) * 100)}%` }}
-                  title={`${bar.month}: ${bar.value}% del volumen`}
-                />
-                <span>{bar.month}</span>
-              </div>
-            ))}
-          </div>
+          <AnalyticsChart
+            valueLabel="Valor de pedidos"
+            points={chartSeries.map((bar) => ({ label: bar.month, value: bar.value, secondary: bar.orders, secondaryLabel: 'Pedidos', detail: `${bar.units} unidades · Ticket ${formatCurrency(bar.value / Math.max(1, bar.orders))}` }))}
+            onSelect={(point) => {
+              const bar = chartSeries.find((item) => item.month === point.label)
+              if (bar) setSelectedPeriod(bar)
+            }}
+          />
         </div>
 
         <div className="chart-card">
@@ -181,10 +156,32 @@ export function DashboardPage() {
                   <span className="dot" style={{ background: item.color }} />
                   {item.label}
                 </span>
-                <span className="legend-pct">{item.percent}%</span>
+                <span className="legend-pct">{item.percent}% · {item.units} und.</span>
               </div>
             ))}
           </div>
+        </div>
+      </div>
+
+      <div className="business-insights" aria-label="Indicadores comerciales del período">
+        <div className="business-insight"><i className="ti ti-receipt-2" /><span>Ticket promedio</span><strong>{formatCurrency(businessInsights.totalValue / Math.max(1, businessInsights.totalOrders))}</strong></div>
+        <div className="business-insight"><i className="ti ti-packages" /><span>Unidades por pedido</span><strong>{(businessInsights.totalUnits / Math.max(1, businessInsights.totalOrders)).toFixed(1)}</strong></div>
+        <div className="business-insight"><i className="ti ti-chart-line" /><span>Variación mensual</span><strong className={businessInsights.variation >= 0 ? 'positive' : 'negative'}>{businessInsights.variation >= 0 ? '+' : ''}{businessInsights.variation.toFixed(1)}%</strong></div>
+        <div className="business-insight"><i className="ti ti-trophy" /><span>Mejor mes</span><strong>{businessInsights.best?.month ?? 'Sin datos'}</strong></div>
+      </div>
+
+      <div className="charts-row charts-row-equal">
+        <div className="chart-card">
+          <div className="card-header">
+            <div><div className="card-title">Pedidos por mes</div><div className="card-sub">Carga comercial y conversión de demanda</div></div>
+          </div>
+          <AnalyticsChart valueLabel="Pedidos" valueFormat="number" points={chartSeries.map((item) => ({ label: item.month, value: item.orders, secondary: item.units, secondaryLabel: 'Unidades', detail: `Promedio: ${(item.units / Math.max(1, item.orders)).toFixed(1)} unidades por pedido` }))} />
+        </div>
+        <div className="chart-card">
+          <div className="card-header">
+            <div><div className="card-title">Unidades vendidas</div><div className="card-sub">Volumen para planificar producción e inventario</div></div>
+          </div>
+          <AnalyticsChart valueLabel="Unidades" valueFormat="number" points={chartSeries.map((item) => ({ label: item.month, value: item.units, secondary: item.orders, secondaryLabel: 'Pedidos', detail: `Facturación: ${formatCurrency(item.value)}` }))} />
         </div>
       </div>
 

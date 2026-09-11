@@ -1,6 +1,40 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from typing import List, Optional
 from decimal import Decimal
+
+class DashboardSerie(BaseModel):
+    month: str
+    value: Decimal
+    orders: int
+    units: Decimal
+
+class DashboardCategoria(BaseModel):
+    label: str
+    percent: int
+    color: str
+    units: Decimal
+
+class DashboardProductoVendido(BaseModel):
+    name: str
+    sku: str
+    category: str
+    units: Decimal
+    revenue: Decimal
+
+class BalancePeriodoFila(BaseModel):
+    periodo: str
+    valor_pedidos: Decimal
+    cantidad_pedidos: int
+    unidades: Decimal
+    ticket_promedio: Decimal
+
+class BalancePeriodoResumen(BaseModel):
+    periodos: List[BalancePeriodoFila] = Field(default_factory=list)
+    total_valor: Decimal
+    total_pedidos: int
+    total_unidades: Decimal
+    ticket_promedio: Decimal
+    mejor_periodo: Optional[str] = None
 
 class DashboardResumen(BaseModel):
     total_pedidos: int
@@ -12,6 +46,9 @@ class DashboardResumen(BaseModel):
     productos_sin_stock: int
     total_usuarios: int
     total_productos: int
+    sales_series: List[DashboardSerie] = Field(default_factory=list)
+    category_share: List[DashboardCategoria] = Field(default_factory=list)
+    best_sellers: List[DashboardProductoVendido] = Field(default_factory=list)
 
 class VentasPorCanal(BaseModel):
     canal: str

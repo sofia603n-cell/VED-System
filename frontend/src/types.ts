@@ -1,4 +1,4 @@
-export type UserRole = 'normal' | 'supremo'
+export type UserRole = 'normal' | 'supremo' | 'cliente'
 export type UserStatus = 'activo' | 'inactivo'
 export type ProductStatus = 'active' | 'inactive'
 
@@ -81,12 +81,15 @@ export interface DashboardMetric {
 export interface SalesSeriesEntry {
   month: string
   value: number
+  orders: number
+  units: number
 }
 
 export interface CategoryShareItem {
   label: string
   percent: number
   color: string
+  units: number
 }
 
 export interface BestSeller {
@@ -111,6 +114,7 @@ export interface DashboardData {
 
 export interface Sale {
   id: number
+  sellerId?: number
   customer: string
   product: string
   total: number
@@ -131,6 +135,7 @@ export interface OrderLine {
 export interface CustomerOrder {
   id: number
   customerId?: number
+  sellerId?: number
   customer: string
   seller?: string
   canal: string

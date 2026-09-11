@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { createProduct, deleteProduct, fetchColors, fetchProducts, fetchReferences, updateProduct } from '../api/mockApi'
 import { ConfirmModal } from '../components/common/ConfirmModal'
 import { useToast } from '../context/ToastContext'
@@ -28,6 +29,8 @@ function emptyProductForm(): ProductForm {
 }
 
 export function ProductsPage() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [items, setItems] = useState<Product[]>([])
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
@@ -44,6 +47,17 @@ export function ProductsPage() {
   const [pageTab, setPageTab] = useState<'catalogo' | 'referencias'>('catalogo')
 
   const { success, warning, info } = useToast()
+
+  useEffect(() => {
+    const editProductId = (location.state as { editProductId?: unknown } | null)?.editProductId
+    if (!Number.isInteger(editProductId)) return
+
+    const product = items.find((item) => item.id === editProductId)
+    if (!product) return
+
+    openEdit(product)
+    navigate(location.pathname, { replace: true, state: null })
+  }, [items, location.pathname, location.state, navigate])
 
   useEffect(() => {
     void Promise.all([fetchProducts(), fetchColors(), fetchReferences()]).then(([products, availableColors, availableReferences]) => {

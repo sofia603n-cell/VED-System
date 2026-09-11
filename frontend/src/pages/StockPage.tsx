@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { fetchStock } from '../api/mockApi'
 import { useToast } from '../context/ToastContext'
 import type { StockItem } from '../types'
@@ -9,7 +10,8 @@ export function StockPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [alertFilter, setAlertFilter] = useState('')
-  const { success, warning, info } = useToast()
+  const { info } = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     fetchStock().then(setItems)
@@ -33,23 +35,6 @@ export function StockPage() {
   const totalStock = items.reduce((sum, item) => sum + item.stock, 0)
   const healthyStock = items.filter((item) => item.stock > item.minStock).length
   const criticalStock = items.filter((item) => item.stock <= item.minStock).length
-
-  const handleQuickAdjust = (id: number, delta: number) => {
-    setItems((prev) =>
-      prev.map((item) => {
-        if (item.id === id) {
-          const newStock = Math.max(0, item.stock + delta)
-          if (newStock <= item.minStock) {
-            warning(`Stock bajo para ${item.name} (${newStock} unid.)`, 'Alerta de Inventario')
-          } else {
-            success(`Stock de ${item.name}: ${newStock} unid.`, 'Existencias actualizadas')
-          }
-          return { ...item, stock: newStock }
-        }
-        return item
-      })
-    )
-  }
 
   const handleExportStock = () => {
     const rows = [
@@ -155,7 +140,7 @@ export function StockPage() {
               <th>Nivel de Existencias</th>
               <th>Mínimo Requerido</th>
               <th>Estado</th>
-              <th style={{ textAlign: 'center' }}>Ajuste Rápido</th>
+              <th style={{ textAlign: 'center' }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -199,34 +184,14 @@ export function StockPage() {
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', gap: '4px' }}>
-                      <button
-                        type="button"
-                        className="icon-action-btn"
-                        onClick={() => handleQuickAdjust(item.id, -1)}
-                        title="Restar 1 unidad"
-                        disabled={item.stock <= 0}
-                      >
-                        -1
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-action-btn"
-                        onClick={() => handleQuickAdjust(item.id, 1)}
-                        title="Sumar 1 unidad"
-                      >
-                        +1
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-action-btn"
-                        style={{ color: 'var(--gold)', fontWeight: 'bold' }}
-                        onClick={() => handleQuickAdjust(item.id, 5)}
-                        title="Sumar 5 unidades"
-                      >
-                        +5
-                      </button>
-                    </div>
+                    <button
+                      type="button"
+                      className="btn-outline"
+                      onClick={() => navigate('/productos', { state: { editProductId: item.id } })}
+                      title={`Editar ${item.name}`}
+                    >
+                      <i className="ti ti-edit" /> Editar producto
+                    </button>
                   </td>
                 </tr>
               )

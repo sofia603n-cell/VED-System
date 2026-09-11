@@ -68,15 +68,6 @@ export function LoginPage({ user, setUser }: { user: User | null; setUser: (user
     await performLogin(email, password)
   }
 
-  const handleQuickDemo = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail)
-    setPassword(demoPass)
-    setError('')
-    setLoginAttempts(0)
-    sessionStorage.setItem('loginAttempts', '0')
-    performLogin(demoEmail, demoPass)
-  }
-
   const handleResetAttempts = () => {
     setLoginAttempts(0)
     sessionStorage.setItem('loginAttempts', '0')
@@ -92,31 +83,6 @@ export function LoginPage({ user, setUser }: { user: User | null; setUser: (user
 
         <h1 className="login-title">Velas Estrella de David</h1>
         <p className="login-sub">Sistema Integral de Inventario, Ventas y Gestión</p>
-
-        {/* Quick Demo Access Bar */}
-        <div className="login-quick-demo">
-          <div className="quick-demo-title">
-            <i className="ti ti-bolt" /> Acceso Rápido (Modo Demo):
-          </div>
-          <div className="quick-demo-btns">
-            <button
-              type="button"
-              className="btn-demo-pill"
-              onClick={() => handleQuickDemo('ana@velas.test', 'admin123')}
-              title="Entrar como Super Administrador"
-            >
-              <i className="ti ti-crown" style={{ color: 'var(--gold)' }} /> Super Admin
-            </button>
-            <button
-              type="button"
-              className="btn-demo-pill"
-              onClick={() => handleQuickDemo('carlos@velas.test', 'carlos123')}
-              title="Entrar como Administrador regular"
-            >
-              <i className="ti ti-shield-check" style={{ color: 'var(--primary-light)' }} /> Admin
-            </button>
-          </div>
-        </div>
 
         {error && (
           <div className="login-error">

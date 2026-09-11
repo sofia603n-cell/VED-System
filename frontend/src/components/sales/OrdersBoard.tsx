@@ -8,10 +8,12 @@ function statusBadge(status: string) {
   return 'badge-danger'
 }
 
-export function OrdersBoard({ orders }: { orders: CustomerOrder[] }) {
+export function OrdersBoard({ orders, onComplete, onEdit, onCancel }: { orders: CustomerOrder[]; onComplete: (order: CustomerOrder) => Promise<void>; onEdit: (order: CustomerOrder) => void; onCancel: (order: CustomerOrder) => Promise<void> }) {
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('Todos')
   const [openId, setOpenId] = useState<number | null>(null)
+  const [completingId, setCompletingId] = useState<number | null>(null)
+  const [cancelingId, setCancelingId] = useState<number | null>(null)
 
   useEffect(() => {
     const multi = orders.find((order) => order.items.length > 1)
@@ -31,6 +33,25 @@ export function OrdersBoard({ orders }: { orders: CustomerOrder[] }) {
     })
   }, [orders, search, statusFilter])
 
+  const handleComplete = async (order: CustomerOrder) => {
+    setCompletingId(order.id)
+    try {
+      await onComplete(order)
+    } finally {
+      setCompletingId(null)
+    }
+  }
+
+  const handleCancel = async (order: CustomerOrder) => {
+    if (!window.confirm(`¿Cancelar el pedido #${order.id}?`)) return
+    setCancelingId(order.id)
+    try {
+      await onCancel(order)
+    } finally {
+      setCancelingId(null)
+    }
+  }
+
   return (
     <>
       <div className="filters-row">
@@ -43,7 +64,7 @@ export function OrdersBoard({ orders }: { orders: CustomerOrder[] }) {
           onChange={(event) => setSearch(event.target.value)}
         />
         <div className="period-pills">
-          {['Todos', 'Pendiente', 'Alistamiento', 'Entregado'].map((status) => (
+          {['Todos', 'Pendiente', 'Alistamiento', 'Entregado', 'Cancelado'].map((status) => (
             <button
               key={status}
               type="button"
@@ -142,6 +163,25 @@ export function OrdersBoard({ orders }: { orders: CustomerOrder[] }) {
                       })}
                     </tbody>
                   </table>
+                  {order.status !== 'Entregado' && order.status !== 'Cancelado' ? (
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '14px' }}>
+                    {order.status === 'Pendiente' ? <button type="button" className="btn-secondary" onClick={() => onEdit(order)}>
+                      <i className="ti ti-edit" /> Editar pedido
+                    </button> : null}
+                    <button type="button" className="btn-secondary" onClick={() => void handleCancel(order)} disabled={cancelingId === order.id} style={{ marginLeft: '8px' }}>
+                      <i className="ti ti-x" /> {cancelingId === order.id ? 'Cancelando...' : 'Cancelar pedido'}
+                    </button>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        onClick={() => void handleComplete(order)}
+                        disabled={completingId === order.id}
+                      >
+                        <i className="ti ti-check" />
+                        {completingId === order.id ? 'Actualizando...' : order.status === 'Pendiente' ? 'Enviar a alistamiento' : 'Completar pedido'}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </article>
