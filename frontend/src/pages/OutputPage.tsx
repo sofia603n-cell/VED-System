@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createInventoryExit, fetchProducts } from '../api/mockApi'
 import type { Product } from '../types'
 
-type OutputType = 'Daño' | 'Defecto'
+type OutputType = string
 
 interface OutputEntry {
   id: number

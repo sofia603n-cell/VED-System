@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { createInventoryEntry, fetchProducts } from '../api/mockApi'
 import type { Product } from '../types'
 
-type EntryType = 'Producción' | 'Reembolso'
+type EntryType = string
 
 interface InventoryEntry {
   id: number
@@ -26,7 +26,7 @@ function emptyEntryForm() {
     productId: '',
     reference: '',
     quantity: 1,
-    type: 'Compra' as EntryType,
+    type: 'Producción' as EntryType,
     date: new Date().toISOString().slice(0, 10),
     note: '',
   }

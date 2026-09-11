@@ -337,102 +337,72 @@ export async function fetchDashboard(): Promise<DashboardData> {
   }
 
   try {
-    const dashboard = (await apiFetchAny<Record<string, unknown>>(['/dashboard', '/reportes/dashboard'], {}).catch(() => ({} as Record<string, unknown>))) as Record<string, unknown>
-    const sales = (await apiFetchAny<Array<Record<string, unknown>>>(['/pedidos', '/sales'], {}).catch(() => [])) as Array<Record<string, unknown>>
-    const fetchedProducts = (await apiFetchAny<Array<Record<string, unknown>>>(['/products', '/productos'], {}).catch(() => DEMO_PRODUCTS)) as Array<Record<string, unknown>>
-    const products = fetchedProducts.length ? fetchedProducts : DEMO_PRODUCTS
-
-    const totalRevenue = products.reduce((sum, product) => {
-      const price = Number(product.precio ?? 0)
-      const units = Number(product.stock_actual ?? 0)
-      return sum + price * units
-    }, 0)
-
-    const underStockCount = products.filter((product) => Number(product.stock_actual ?? 0) <= Number(product.stock_minimo ?? 0)).length
-    const totalOrders = sales.length || Math.max(12, products.length * 3)
-    const salesTotal = sales.reduce((sum, sale) => sum + Number(sale.total ?? 0), 0) || totalRevenue * 0.38
+    const dashboard = await apiFetchAny<Record<string, unknown>>(['/reportes/dashboard'])
+    const salesSeries = Array.isArray(dashboard.sales_series)
+      ? dashboard.sales_series.map((item) => ({
+          month: String((item as Record<string, unknown>).month ?? ''),
+          value: Number((item as Record<string, unknown>).value ?? 0),
+        }))
+      : []
+    const categoryItems = Array.isArray(dashboard.category_share)
+      ? dashboard.category_share.map((item) => ({
+          label: String((item as Record<string, unknown>).label ?? 'General'),
+          percent: Number((item as Record<string, unknown>).percent ?? 0),
+          color: String((item as Record<string, unknown>).color ?? '#8f7b50'),
+        }))
+      : []
+    const bestSellers = Array.isArray(dashboard.best_sellers)
+      ? dashboard.best_sellers.map((item) => {
+          const product = item as Record<string, unknown>
+          return {
+            name: String(product.name ?? 'Producto'),
+            sku: String(product.sku ?? 'SIN-SKU'),
+            category: String(product.category ?? 'General'),
+            units: Number(product.units ?? 0),
+            revenue: Number(product.revenue ?? 0),
+            trend: 'Actual',
+            trendType: 'badge-success' as const,
+          }
+        })
+      : []
 
     const metrics = [
       {
         label: 'Pedidos',
-        value: String(totalOrders),
+        value: String(Number(dashboard.total_pedidos ?? 0)),
         subtext: 'Total del sistema',
         trendType: 'delta-up' as const,
         icon: 'ti-shopping-cart',
       },
       {
         label: 'Ventas',
-        value: formatCurrency(salesTotal),
+        value: formatCurrency(Number(dashboard.total_ventas_monto ?? 0)),
         subtext: 'Monto registrado',
         trendType: 'delta-up' as const,
         icon: 'ti-cash',
       },
       {
         label: 'Bajo stock',
-        value: String(underStockCount),
+        value: String(Number(dashboard.productos_bajo_stock ?? 0)),
         subtext: 'Productos a revisar',
         trendType: 'delta-down' as const,
         icon: 'ti-package',
       },
       {
         label: 'Usuarios',
-        value: String(Number(dashboard.total_usuarios ?? 3)),
+        value: String(Number(dashboard.total_usuarios ?? 0)),
         subtext: 'Activos en el sistema',
         trendType: 'delta-up' as const,
         icon: 'ti-users',
       },
     ]
 
-    const monthBase = [36, 52, 48, 58, 70, 82]
-    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-    const salesSeries = months.map((month, index) => {
-      const base = monthBase[index % monthBase.length]
-      const productBoost = Math.max(12, Math.round((products.length * 8) + (index + 1) * 9))
-      const value = Math.min(100, Math.max(22, Math.round(base + productBoost / 3)))
-      return {
-        month,
-        value: index >= 6 ? Math.min(100, value + 6) : value,
-      }
-    })
-
-    const categoryMap = new Map<string, number>()
-    for (const product of products) {
-      const key = String(product.referencia_nombre ?? product.category ?? 'General')
-      categoryMap.set(key, (categoryMap.get(key) ?? 0) + 1)
-    }
-
-    const palette = ['#d4af37', '#7c4dff', '#3a86ff', '#e7c76c', '#8f7b50']
-    const categoryEntries = [...categoryMap.entries()].map(([label, count], index) => ({
-      label,
-      percent: Math.max(10, Math.round((count / Math.max(1, [...categoryMap.values()].reduce((sum, value) => sum + value, 0))) * 100)),
-      color: palette[index % palette.length],
-    }))
-
-    const totalCategory = categoryEntries.reduce((sum, item) => sum + item.percent, 0)
-    const adjustedCategories = categoryEntries.map((item) => ({
-      ...item,
-      percent: Math.max(12, Math.round((item.percent / Math.max(1, totalCategory)) * 100)),
-    }))
-
-    const bestSellers: DashboardData['bestSellers'] = products
-      .map((product, index) => ({
-        name: String(product.nombre ?? `Producto ${index + 1}`),
-        sku: `VEL-${Number(product.id_producto ?? index + 1)}`,
-        category: String(product.referencia_nombre ?? 'General'),
-        units: Math.max(1, Number(product.stock_actual ?? 0) || 1),
-        revenue: Number(product.precio ?? 0) * (Math.max(1, Number(product.stock_actual ?? 0) || 1)),
-        trend: index % 2 === 0 ? '+8%' : '+12%',
-        trendType: (index % 2 === 0 ? 'badge-success' : 'badge-warning') as 'badge-success' | 'badge-warning',
-      }))
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5)
-
     return {
       metrics,
       salesSeries,
       categoryShare: {
         total: 100,
-        items: adjustedCategories.slice(0, 4),
+        items: categoryItems,
       },
       bestSellers,
     }
@@ -718,16 +688,19 @@ export async function fetchColors(): Promise<Array<{ id: number; nombre: string 
   }
 }
 
+export type InventoryMovementDirection = string
+
 export async function createInventoryEntry(payload: {
   productId: number
   quantity: number
-  type: 'Producción' | 'Reembolso'
+  type: string
+  movementType?: InventoryMovementDirection
 }): Promise<void> {
   await apiFetchAny(['/inventario/movimientos'], {
     method: 'POST',
     body: JSON.stringify({
       motivo: payload.type,
-      tipo_movimiento: 'entrada',
+      tipo_movimiento: payload.movementType || 'entrada',
       items: [{ id_producto: payload.productId, cantidad: payload.quantity }],
     }),
   })
@@ -736,13 +709,14 @@ export async function createInventoryEntry(payload: {
 export async function createInventoryExit(payload: {
   productId: number
   quantity: number
-  type: 'Daño' | 'Defecto'
+  type: string
+  movementType?: InventoryMovementDirection
 }): Promise<void> {
   await apiFetchAny(['/inventario/movimientos'], {
     method: 'POST',
     body: JSON.stringify({
       motivo: payload.type,
-      tipo_movimiento: 'salida',
+      tipo_movimiento: payload.movementType || 'salida',
       items: [{ id_producto: payload.productId, cantidad: payload.quantity }],
     }),
   })
