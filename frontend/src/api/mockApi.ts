@@ -290,6 +290,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
     value: Number((item as Record<string, unknown>).value ?? 0),
     orders: Number((item as Record<string, unknown>).orders ?? 0),
     units: Number((item as Record<string, unknown>).units ?? 0),
+    damaged: Number((item as Record<string, unknown>).damaged ?? 0),
   })) : []
   const categoryItems = Array.isArray(dashboard.category_share) ? dashboard.category_share.map((item) => ({
     label: String((item as Record<string, unknown>).label ?? 'General'),
@@ -495,6 +496,9 @@ export async function fetchReports(): Promise<ReportData> {
     profit: 0,
     margin: 0,
     salesCount: Number(item.cantidad_pedidos ?? 0),
+    units: Number(item.unidades ?? 0),
+    damaged: Number(item.danadas ?? 0),
+    averageInvoice: Number(item.factura_promedio ?? item.ticket_promedio ?? 0),
   }))
 
   const cards = [

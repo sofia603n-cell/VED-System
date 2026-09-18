@@ -3,9 +3,11 @@ import { Link, useNavigate } from 'react-router-dom'
 import { fetchDashboard } from '../api/mockApi'
 import { MetricCard } from '../components/common/MetricCard'
 import { AnalyticsChart } from '../components/common/AnalyticsChart'
+import { StatsBarChart } from '../components/common/StatsBarChart'
 import { LoadingState } from '../components/common/LoadingState'
 import type { DashboardData } from '../types'
 import { formatCurrency } from '../utils/formatters'
+
 const emptyDashboardData: DashboardData = {
   metrics: [],
   salesSeries: [],
@@ -16,7 +18,7 @@ const emptyDashboardData: DashboardData = {
 export function DashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [range, setRange] = useState<'6M' | '1A'>('6M')
-  const [selectedPeriod, setSelectedPeriod] = useState<{ month: string; value: number; orders: number; units: number } | null>(null)
+  const [selectedPeriod, setSelectedPeriod] = useState<{ month: string; value: number; orders: number; units: number; damaged?: number } | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -102,7 +104,7 @@ export function DashboardPage() {
               <div className="card-title">Ventas & Producción</div>
               <div className="card-sub">
                 {insightPeriod
-                  ? `${insightPeriod.month}: ${insightPeriod.orders} pedidos · ${insightPeriod.units} unidades · Ticket ${formatCurrency(insightPeriod.value / Math.max(1, insightPeriod.orders))}`
+                  ? `${insightPeriod.month}: ${insightPeriod.orders} pedidos · ${insightPeriod.units} unidades · Factura ${formatCurrency(insightPeriod.value / Math.max(1, insightPeriod.orders))}`
                   : 'Selecciona un período para analizar pedidos y volumen'}
               </div>
             </div>
@@ -126,7 +128,7 @@ export function DashboardPage() {
 
           <AnalyticsChart
             valueLabel="Valor de pedidos"
-            points={chartSeries.map((bar) => ({ label: bar.month, value: bar.value, secondary: bar.orders, secondaryLabel: 'Pedidos', detail: `${bar.units} unidades · Ticket ${formatCurrency(bar.value / Math.max(1, bar.orders))}` }))}
+            points={chartSeries.map((bar) => ({ label: bar.month, value: bar.value, secondary: bar.orders, secondaryLabel: 'Pedidos', detail: `${bar.units} unidades · Factura ${formatCurrency(bar.value / Math.max(1, bar.orders))}` }))}
             onSelect={(point) => {
               const bar = chartSeries.find((item) => item.month === point.label)
               if (bar) setSelectedPeriod(bar)
@@ -164,25 +166,24 @@ export function DashboardPage() {
       </div>
 
       <div className="business-insights" aria-label="Indicadores comerciales del período">
-        <div className="business-insight"><i className="ti ti-receipt-2" /><span>Ticket promedio</span><strong>{formatCurrency(businessInsights.totalValue / Math.max(1, businessInsights.totalOrders))}</strong></div>
+        <div className="business-insight"><i className="ti ti-receipt-2" /><span>Factura promedio</span><strong>{formatCurrency(businessInsights.totalValue / Math.max(1, businessInsights.totalOrders))}</strong></div>
         <div className="business-insight"><i className="ti ti-packages" /><span>Unidades por pedido</span><strong>{(businessInsights.totalUnits / Math.max(1, businessInsights.totalOrders)).toFixed(1)}</strong></div>
         <div className="business-insight"><i className="ti ti-chart-line" /><span>Variación mensual</span><strong className={businessInsights.variation >= 0 ? 'positive' : 'negative'}>{businessInsights.variation >= 0 ? '+' : ''}{businessInsights.variation.toFixed(1)}%</strong></div>
         <div className="business-insight"><i className="ti ti-trophy" /><span>Mejor mes</span><strong>{businessInsights.best?.month ?? 'Sin datos'}</strong></div>
       </div>
 
-      <div className="charts-row charts-row-equal">
-        <div className="chart-card">
-          <div className="card-header">
-            <div><div className="card-title">Pedidos por mes</div><div className="card-sub">Carga comercial y conversión de demanda</div></div>
-          </div>
-          <AnalyticsChart valueLabel="Pedidos" valueFormat="number" points={chartSeries.map((item) => ({ label: item.month, value: item.orders, secondary: item.units, secondaryLabel: 'Unidades', detail: `Promedio: ${(item.units / Math.max(1, item.orders)).toFixed(1)} unidades por pedido` }))} />
-        </div>
-        <div className="chart-card">
-          <div className="card-header">
-            <div><div className="card-title">Unidades vendidas</div><div className="card-sub">Volumen para planificar producción e inventario</div></div>
-          </div>
-          <AnalyticsChart valueLabel="Unidades" valueFormat="number" points={chartSeries.map((item) => ({ label: item.month, value: item.units, secondary: item.orders, secondaryLabel: 'Pedidos', detail: `Facturación: ${formatCurrency(item.value)}` }))} />
-        </div>
+      {/* Gráfico de Barras: Comparativa de Dañadas, Vendidas y Pedidos */}
+      <div style={{ marginBottom: '24px' }}>
+        <StatsBarChart
+          data={chartSeries.map((item) => ({
+            label: item.month,
+            damaged: item.damaged ?? 0,
+            sold: item.units,
+            orders: item.orders,
+          }))}
+          title="Estadísticas de Operación: Dañadas, Vendidas y Pedidos"
+          subtitle="Gráfico de barras comparativo: cuántas se dañaron, cuántas se vendieron y cuántos pedidos se hicieron"
+        />
       </div>
 
       {/* Productos más vendidos */}

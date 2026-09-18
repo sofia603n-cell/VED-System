@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { fetchReports } from '../api/mockApi'
 import { MetricCard } from '../components/common/MetricCard'
 import { AnalyticsChart } from '../components/common/AnalyticsChart'
+import { StatsBarChart } from '../components/common/StatsBarChart'
 import { LoadingState } from '../components/common/LoadingState'
 import { useToast } from '../context/ToastContext'
 import type { ReportData } from '../types'
@@ -27,7 +28,7 @@ export function ReportsPage() {
 
   const summary = useMemo(() => {
     if (!visibleRows.length) {
-      return { income: 0, profit: 0, margin: 0, orders: 0, averageTicket: 0 }
+      return { income: 0, profit: 0, margin: 0, orders: 0, averageInvoice: 0 }
     }
 
     const income = visibleRows.reduce((sum, row) => sum + row.income, 0)
@@ -35,7 +36,7 @@ export function ReportsPage() {
     const orders = visibleRows.reduce((sum, row) => sum + (row.salesCount ?? 0), 0)
     const margin = Math.round((profit / Math.max(1, income)) * 100)
 
-    return { income, profit, margin, orders, averageTicket: income / Math.max(1, orders) }
+    return { income, profit, margin, orders, averageInvoice: income / Math.max(1, orders) }
   }, [visibleRows])
 
   const selectedRow = useMemo(() => {
@@ -54,13 +55,14 @@ export function ReportsPage() {
 
   const handleExportCSV = () => {
     const rows = [
-      ['Período', 'Ingresos (COP)', 'Ganancia Neta (COP)', 'Margen (%)', 'Ventas Realizadas'],
+      ['Período', 'Ingresos (COP)', 'Ganancia Neta (COP)', 'Margen (%)', 'Ventas Realizadas', 'Factura Promedio (COP)'],
       ...visibleRows.map((r) => [
         r.period,
         String(r.income),
         String(r.profit),
         `${Math.round((r.profit / Math.max(1, r.income)) * 100)}%`,
         String(r.salesCount ?? 0),
+        String(Math.round(r.income / Math.max(1, r.salesCount ?? 0))),
       ]),
     ]
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(',')).join('\n')
@@ -100,7 +102,7 @@ export function ReportsPage() {
 
       <div className="business-insights" aria-label="Resumen comercial del rango seleccionado">
         <div className="business-insight"><i className="ti ti-cash" /><span>Facturación del rango</span><strong>{formatCurrency(summary.income)}</strong></div>
-        <div className="business-insight"><i className="ti ti-receipt" /><span>Ticket promedio</span><strong>{formatCurrency(summary.averageTicket)}</strong></div>
+        <div className="business-insight"><i className="ti ti-receipt" /><span>Factura promedio</span><strong>{formatCurrency(summary.averageInvoice)}</strong></div>
         <div className="business-insight"><i className="ti ti-chart-line" /><span>Variación mensual</span><strong className={monthlyVariation >= 0 ? 'positive' : 'negative'}>{monthlyVariation >= 0 ? '+' : ''}{monthlyVariation.toFixed(1)}%</strong></div>
         <div className="business-insight"><i className="ti ti-award" /><span>Mejor período</span><strong>{bestPeriod?.period ?? 'Sin datos'}</strong></div>
       </div>
@@ -113,7 +115,7 @@ export function ReportsPage() {
               <div className="card-title">Evolución mensual de pedidos</div>
               <div className="card-sub">
                 {selectedRow
-                  ? `${selectedRow.period}: ${formatCurrency(selectedRow.income)} · ${selectedRow.salesCount ?? 0} pedidos · Ticket ${formatCurrency(selectedRow.income / Math.max(1, selectedRow.salesCount ?? 0))}`
+                  ? `${selectedRow.period}: ${formatCurrency(selectedRow.income)} · ${selectedRow.salesCount ?? 0} pedidos · Factura ${formatCurrency(selectedRow.income / Math.max(1, selectedRow.salesCount ?? 0))}`
                   : 'Comparativa mensual'}
               </div>
             </div>
@@ -135,53 +137,22 @@ export function ReportsPage() {
             </div>
           </div>
 
-          <AnalyticsChart valueLabel="Valor de pedidos" points={visibleRows.map((row) => ({ label: row.period, value: row.income, secondary: row.salesCount ?? 0, secondaryLabel: 'Pedidos', detail: `Ticket promedio ${formatCurrency(row.income / Math.max(1, row.salesCount ?? 0))}` }))} onSelect={(point) => setActivePeriod(point.label)} />
-          {false && <div className="chart-bars" style={{ height: '220px' }}>
-            {visibleRows.map((row) => {
-              const isActive = row.period === selectedRow?.period
-              return (
-                <div
-                  key={row.period}
-                  className="bar-group"
-                  style={{ cursor: 'pointer', opacity: isActive ? 1 : 0.8 }}
-                  onMouseEnter={() => setActivePeriod(row.period)}
-                >
-                  <div style={{ display: 'flex', gap: '3px', alignItems: 'flex-end', height: '100%', width: '100%', justifyContent: 'center' }}>
-                    <div
-                      className="bar"
-                      style={{
-                        height: '100%',
-                        background: 'linear-gradient(180deg, var(--gold) 0%, rgba(217, 119, 6, 0.4) 100%)',
-                        maxWidth: '20px',
-                      }}
-                      title={`Ingresos: ${formatCurrency(row.income)}`}
-                    />
-                    <div
-                      className="bar"
-                      style={{
-                        height: '0%',
-                        background: 'linear-gradient(180deg, var(--success) 0%, rgba(16, 185, 129, 0.4) 100%)',
-                        maxWidth: '20px',
-                      }}
-                      title={`Ganancia: ${formatCurrency(row.profit)}`}
-                    />
-                  </div>
-                  <span style={{ fontWeight: isActive ? 700 : 500, color: isActive ? 'var(--gold)' : 'var(--text-dim)' }}>
-                    {row.period}
-                  </span>
-                </div>
-              )
-            })}
-          </div>}
+          <AnalyticsChart
+            valueLabel="Valor de pedidos"
+            points={visibleRows.map((row) => ({
+              label: row.period,
+              value: row.income,
+              secondary: row.salesCount ?? 0,
+              secondaryLabel: 'Pedidos',
+              detail: `Factura promedio ${formatCurrency(row.income / Math.max(1, row.salesCount ?? 0))}`,
+            }))}
+            onSelect={(point) => setActivePeriod(point.label)}
+          />
 
           <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '16px', fontSize: '0.8rem' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span style={{ width: '12px', height: '12px', background: 'var(--gold)', borderRadius: '3px' }} />
               Valor de pedidos
-            </span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: 'var(--success)', borderRadius: '3px' }} />
-              Métrica no disponible (sin costos)
             </span>
           </div>
         </div>
@@ -212,7 +183,7 @@ export function ReportsPage() {
               </div>
 
               <div style={{ background: 'var(--bg-input)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Ticket promedio</span>
+                <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Factura promedio</span>
                 <div style={{ fontFamily: 'Outfit', fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-main)' }}>
                   {formatCurrency((selectedRow?.income ?? 0) / Math.max(1, selectedRow?.salesCount ?? 0))}
                 </div>
@@ -222,11 +193,18 @@ export function ReportsPage() {
         </div>
       </div>
 
-      <div className="chart-card" style={{ marginBottom: '20px' }}>
-        <div className="card-header">
-          <div><div className="card-title">Volumen de pedidos por período</div><div className="card-sub">Identifica meses de alta demanda para planear producción y personal</div></div>
-        </div>
-        <AnalyticsChart valueLabel="Pedidos" valueFormat="number" points={visibleRows.map((row) => ({ label: row.period, value: row.salesCount ?? 0, secondary: row.income, secondaryLabel: 'Facturación', detail: `Ticket promedio ${formatCurrency(row.income / Math.max(1, row.salesCount ?? 0))}` }))} onSelect={(point) => setActivePeriod(point.label)} />
+      {/* Gráfico de Barras: Comparativa de Dañadas, Vendidas y Pedidos */}
+      <div style={{ marginBottom: '24px' }}>
+        <StatsBarChart
+          data={visibleRows.map((row) => ({
+            label: row.period,
+            damaged: row.damaged ?? 0,
+            sold: row.units ?? row.salesCount ?? 0,
+            orders: row.salesCount ?? 0,
+          }))}
+          title="Estadísticas de Operación: Dañadas, Vendidas y Pedidos"
+          subtitle="Gráfico de barras comparativo: cuántas se dañaron, cuántas se vendieron y cuántos pedidos se hicieron por mes"
+        />
       </div>
 
       {/* Tabla Desglosada */}
@@ -235,9 +213,9 @@ export function ReportsPage() {
           <thead>
             <tr>
               <th>Mes / Período</th>
-              <th>Ventas Facturadas</th>
-              <th>Ingresos Totales</th>
-              <th>Utilidad Estimada</th>
+              <th>Pedidos Realizados</th>
+              <th>Facturación Total</th>
+              <th>Factura Promedio</th>
               <th>Margen (%)</th>
               <th>Estado</th>
             </tr>
@@ -245,6 +223,7 @@ export function ReportsPage() {
           <tbody>
             {visibleRows.map((row) => {
               const marginPct = Math.round((row.profit / Math.max(1, row.income)) * 100)
+              const avgInvoice = row.income / Math.max(1, row.salesCount ?? 0)
               return (
                 <tr key={row.period}>
                   <td>
@@ -255,7 +234,7 @@ export function ReportsPage() {
                     <strong style={{ color: 'var(--gold)' }}>{formatCurrency(row.income)}</strong>
                   </td>
                   <td>
-                    <strong style={{ color: 'var(--success)' }}>{formatCurrency(row.profit)}</strong>
+                    <strong style={{ color: 'var(--success)' }}>{formatCurrency(avgInvoice)}</strong>
                   </td>
                   <td>
                     <span className="badge badge-neutral">{marginPct}%</span>

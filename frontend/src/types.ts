@@ -83,6 +83,7 @@ export interface SalesSeriesEntry {
   value: number
   orders: number
   units: number
+  damaged?: number
 }
 
 export interface CategoryShareItem {
@@ -184,6 +185,9 @@ export interface ReportRow {
   profit: number
   margin: number
   salesCount?: number
+  units?: number
+  damaged?: number
+  averageInvoice?: number
 }
 
 export interface ReportData {
