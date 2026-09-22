@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchAudit } from '../api/mockApi'
-import { MetricCard } from '../components/common/MetricCard'
+import { AuditFilters, AuditHeader, AuditMetrics, AuditTable } from '../components/audit/AuditBlocks'
 import { useToast } from '../context/ToastContext'
 import type { AuditEntry } from '../types'
 
@@ -64,127 +64,10 @@ export function AuditPage() {
     return { class: 'badge-neutral', icon: 'ti-activity' }
   }
 
-  return (
-    <>
-      <div className="section-header">
-        <div>
-          <h2 className="section-title">Auditoría & Trazabilidad</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Registro inmutable de todas las operaciones realizadas en la plataforma
-          </span>
-        </div>
-        <button type="button" className="btn-outline" onClick={handleExportCSV}>
-          <i className="ti ti-download" /> Exportar Auditoría (CSV)
-        </button>
-      </div>
-
-      {/* Métricas de Auditoría */}
-      <div className="metrics-grid">
-        <MetricCard
-          metric={{
-            label: 'Eventos Registrados',
-            value: String(totalActions),
-            subtext: 'Trazabilidad completa',
-            trendType: 'delta-up',
-            icon: 'ti-activity',
-          }}
-        />
-        <MetricCard
-          metric={{
-            label: 'Movimientos de Stock',
-            value: String(inventoryChanges),
-            subtext: 'En inventario y almacén',
-            trendType: 'delta-up',
-            icon: 'ti-package',
-          }}
-        />
-        <MetricCard
-          metric={{
-            label: 'Transacciones Comerciales',
-            value: String(salesChanges),
-            subtext: 'En módulo de ventas',
-            trendType: 'delta-up',
-            icon: 'ti-receipt',
-          }}
-        />
-      </div>
-
-      {/* Filtros */}
-      <div className="filters-row">
-        <input
-          type="text"
-          className="form-input"
-          style={{ maxWidth: '340px' }}
-          placeholder="Buscar por usuario, acción, fecha..."
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
-        />
-        <select
-          className="form-input small"
-          style={{ width: 'auto' }}
-          value={moduleFilter}
-          onChange={(event) => setModuleFilter(event.target.value)}
-        >
-          {modules.map((module) => (
-            <option key={module} value={module}>
-              Módulo: {module}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Tabla de Registros */}
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Fecha y Hora</th>
-              <th>Usuario</th>
-              <th>Módulo</th>
-              <th>Acción Realizada</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredEntries.map((entry) => {
-              const badge = getActionBadge(entry.action)
-              return (
-                <tr key={entry.id}>
-                  <td>
-                    <span style={{ fontFamily: 'monospace', color: 'var(--text-dim)' }}>
-                      #{entry.id}
-                    </span>
-                  </td>
-                  <td>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-                      {entry.date}
-                    </span>
-                  </td>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div
-                        className="user-avatar"
-                        style={{ width: '28px', height: '28px', fontSize: '0.7rem' }}
-                      >
-                        {entry.user.slice(0, 2).toUpperCase()}
-                      </div>
-                      <strong>{entry.user}</strong>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="badge badge-neutral">{entry.module}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${badge.class}`} style={{ display: 'inline-flex', gap: '6px' }}>
-                      <i className={`ti ${badge.icon}`} /> {entry.action}
-                    </span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>
-  )
+  return <>
+    <AuditHeader onExport={handleExportCSV} />
+    <AuditMetrics total={totalActions} inventory={inventoryChanges} sales={salesChanges} />
+    <AuditFilters query={query} moduleFilter={moduleFilter} modules={modules} onQuery={setQuery} onModule={setModuleFilter} />
+    <AuditTable entries={filteredEntries} getBadge={getActionBadge} />
+  </>
 }

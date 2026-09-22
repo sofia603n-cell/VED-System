@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { fetchStock } from '../api/mockApi'
+import { StockFilters } from '../components/stock/StockFilters'
+import { StockSummary } from '../components/stock/StockSummary'
+import { StockTable } from '../components/stock/StockTable'
 import { useToast } from '../context/ToastContext'
 import type { StockItem } from '../types'
-import { getProductState, stateClass } from '../utils/formatters'
 
 export function StockPage() {
   const [items, setItems] = useState<StockItem[]>([])
@@ -60,24 +62,7 @@ export function StockPage() {
 
   return (
     <>
-      {/* Tarjetas de Resumen */}
-      <div className="stock-summary-grid">
-        <div className="stock-summary-card primary">
-          <div className="summary-label">Total en Bodega</div>
-          <div className="summary-value">{totalStock}</div>
-          <div className="summary-foot">Unidades físicas listas</div>
-        </div>
-        <div className="stock-summary-card success">
-          <div className="summary-label">Stock Saludable</div>
-          <div className="summary-value">{healthyStock}</div>
-          <div className="summary-foot">Por encima del mínimo</div>
-        </div>
-        <div className="stock-summary-card warning">
-          <div className="summary-label">Por Reponer</div>
-          <div className="summary-value">{criticalStock}</div>
-          <div className="summary-foot">Requieren orden de fabricación</div>
-        </div>
-      </div>
+      <StockSummary totalStock={totalStock} healthyStock={healthyStock} criticalStock={criticalStock} />
 
       {alertCount > 0 && (
         <div className="alert-bar">
@@ -88,117 +73,21 @@ export function StockPage() {
         </div>
       )}
 
-      {/* Filtros y Acciones */}
-      <div className="section-header">
-        <div className="filters-row" style={{ flex: 1 }}>
-          <input
-            type="text"
-            className="form-input"
-            style={{ maxWidth: '280px' }}
-            placeholder="Buscar referencia o vela..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+      <StockFilters
+        search={search}
+        category={category}
+        alertFilter={alertFilter}
+        categories={categories}
+        onSearchChange={setSearch}
+        onCategoryChange={setCategory}
+        onAlertFilterChange={setAlertFilter}
+        onExport={handleExportStock}
+      />
 
-          <select
-            className="form-input small"
-            style={{ width: 'auto' }}
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            {categories.map((c) => (
-              <option key={c} value={c === 'Todas' ? '' : c}>
-                {c}
-              </option>
-            ))}
-          </select>
-
-          <select
-            className="form-input small"
-            style={{ width: 'auto' }}
-            value={alertFilter}
-            onChange={(e) => setAlertFilter(e.target.value)}
-          >
-            <option value="">Todas las alertas</option>
-            <option value="bajo">Solo bajo mínimo</option>
-            <option value="ok">Solo estables</option>
-          </select>
-        </div>
-
-        <button type="button" className="btn-outline" onClick={handleExportStock}>
-          <i className="ti ti-download" /> Exportar Inventario
-        </button>
-      </div>
-
-      {/* Tabla de Stock con Ajuste Rápido */}
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Vela & SKU</th>
-              <th>Línea</th>
-              <th>Nivel de Existencias</th>
-              <th>Mínimo Requerido</th>
-              <th>Estado</th>
-              <th style={{ textAlign: 'center' }}>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredItems.map((item) => {
-              const state = getProductState(item)
-              const maxRef = Math.max(item.minStock * 2, 10)
-              const pct = Math.min(100, Math.max(10, (item.stock / maxRef) * 100))
-
-              return (
-                <tr key={item.id}>
-                  <td>
-                    <div className="product-cell">
-                      <div className="product-thumb">🕯️</div>
-                      <div>
-                        <div className="product-name">{item.name}</div>
-                        <div className="product-sku">{item.sku || `VEL-${item.id}`}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <span className="badge badge-neutral">{item.category}</span>
-                  </td>
-                  <td style={{ minWidth: '180px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: '4px' }}>
-                      <strong>{item.stock} unidades</strong>
-                      <span style={{ color: 'var(--text-dim)' }}>{pct.toFixed(0)}%</span>
-                    </div>
-                    <div className="stock-bar-wrap">
-                      <div
-                        className={`stock-bar-fill ${state === 'success' ? 'healthy' : state === 'warning' ? 'warning' : 'critical'}`}
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </td>
-                  <td>
-                    <span style={{ color: 'var(--text-muted)' }}>{item.minStock} unid.</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${stateClass(state)}`}>
-                      {item.stock <= item.minStock ? 'Bajo Mínimo' : 'Óptimo'}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button
-                      type="button"
-                      className="btn-outline"
-                      onClick={() => navigate('/productos', { state: { editProductId: item.id } })}
-                      title={`Editar ${item.name}`}
-                    >
-                      <i className="ti ti-edit" /> Editar producto
-                    </button>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      <StockTable
+        items={filteredItems}
+        onEdit={(item) => navigate('/productos', { state: { editProductId: item.id } })}
+      />
     </>
   )
 }

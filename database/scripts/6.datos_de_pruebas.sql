@@ -999,4 +999,450 @@ BEGIN
 END;
 $$;
 
+/* ============================================================
+   15. MÁS DATOS DE PRUEBA ADICIONALES
+   ============================================================ */
+
+INSERT INTO ciudad (nombre)
+VALUES
+    ('Pereira'),
+    ('Bucaramanga'),
+    ('Armenia'),
+    ('Villavicencio'),
+    ('Ibagué')
+ON CONFLICT (nombre) DO NOTHING;
+
+INSERT INTO color (nombre)
+VALUES
+    ('Negro'),
+    ('Gris'),
+    ('Naranja'),
+    ('Rosado'),
+    ('Celeste')
+ON CONFLICT (nombre) DO NOTHING;
+
+INSERT INTO referencia (nombre_referencia)
+VALUES
+    ('Económica'),
+    ('Especial'),
+    ('Navideña Premium'),
+    ('Festiva'),
+    ('Rústica')
+ON CONFLICT (nombre_referencia) DO NOTHING;
+
+INSERT INTO usuario (
+    nombre_usuario,
+    apellidos_usuario,
+    usuario_login,
+    documento,
+    password,
+    estado,
+    activo,
+    rol,
+    correo,
+    telefono,
+    direccion,
+    id_ciudad
+)
+SELECT 'María', 'Pérez', 'ventas01', 'TEST-AD-002', '$2b$12$uafKLPVy8Gc.zxS8F/ZG7uJ2GKL5XmBLzA7ylMPGtUB0aKsF1q4ZW', 'Activo', TRUE, 'admin', 'ventas01@test.ved', '3000000011', 'Carrera 10 # 20-30', id_ciudad
+FROM ciudad WHERE nombre = 'Pereira'
+ON CONFLICT (usuario_login) DO NOTHING;
+
+INSERT INTO usuario (
+    nombre_usuario,
+    apellidos_usuario,
+    usuario_login,
+    documento,
+    password,
+    estado,
+    activo,
+    rol,
+    correo,
+    telefono,
+    direccion,
+    id_ciudad
+)
+SELECT 'Daniel', 'Castro', 'cliente03', 'TEST-CL-003', '$2b$12$GyNwlWMwBeDBDWsIl6Fw4OAxS5yrQXsGRMMSbqDef.6iNy/A53TZa', 'Activo', TRUE, 'cliente', 'cliente03@test.ved', '3000000012', 'Calle 15 # 8-45', id_ciudad
+FROM ciudad WHERE nombre = 'Bucaramanga'
+ON CONFLICT (usuario_login) DO NOTHING;
+
+INSERT INTO usuario (
+    nombre_usuario,
+    apellidos_usuario,
+    usuario_login,
+    documento,
+    password,
+    estado,
+    activo,
+    rol,
+    correo,
+    telefono,
+    direccion,
+    id_ciudad
+)
+SELECT 'Sofia', 'Ríos', 'cliente04', 'TEST-CL-004', '$2b$12$GyNwlWMwBeDBDWsIl6Fw4OAxS5yrQXsGRMMSbqDef.6iNy/A53TZa', 'Activo', TRUE, 'cliente', 'cliente04@test.ved', '3000000013', 'Avenida 7 # 12-18', id_ciudad
+FROM ciudad WHERE nombre = 'Armenia'
+ON CONFLICT (usuario_login) DO NOTHING;
+
+INSERT INTO usuario (
+    nombre_usuario,
+    apellidos_usuario,
+    usuario_login,
+    documento,
+    password,
+    estado,
+    activo,
+    rol,
+    correo,
+    telefono,
+    direccion,
+    id_ciudad
+)
+SELECT 'José', 'Muñoz', 'cliente05', 'TEST-CL-005', '$2b$12$GyNwlWMwBeDBDWsIl6Fw4OAxS5yrQXsGRMMSbqDef.6iNy/A53TZa', 'Activo', TRUE, 'cliente', 'cliente05@test.ved', '3000000014', 'Diagonal 5 # 17-10', id_ciudad
+FROM ciudad WHERE nombre = 'Villavicencio'
+ON CONFLICT (usuario_login) DO NOTHING;
+
+INSERT INTO producto (
+    descripcion,
+    id_color,
+    presentacion,
+    precio,
+    stock_actual,
+    stock_minimo,
+    id_referencia,
+    nombre
+)
+SELECT 'Veladora negra artesanal', c.id_color, 'unidad', 6200.00, 18, 6, r.id_referencia, 'Veladora Negra Artesanal'
+FROM color c
+CROSS JOIN referencia r
+WHERE c.nombre = 'Negro' AND r.nombre_referencia = 'Especial';
+
+INSERT INTO producto (
+    descripcion,
+    id_color,
+    presentacion,
+    precio,
+    stock_actual,
+    stock_minimo,
+    id_referencia,
+    nombre
+)
+SELECT 'Veladora gris elegante', c.id_color, 'paquete_x12', 54000.00, 22, 7, r.id_referencia, 'Veladora Gris Elegante x12'
+FROM color c
+CROSS JOIN referencia r
+WHERE c.nombre = 'Gris' AND r.nombre_referencia = 'Económica';
+
+INSERT INTO producto (
+    descripcion,
+    id_color,
+    presentacion,
+    precio,
+    stock_actual,
+    stock_minimo,
+    id_referencia,
+    nombre
+)
+SELECT 'Veladora naranja festiva', c.id_color, 'unidad', 7200.00, 14, 5, r.id_referencia, 'Veladora Naranja Festiva'
+FROM color c
+CROSS JOIN referencia r
+WHERE c.nombre = 'Naranja' AND r.nombre_referencia = 'Festiva';
+
+INSERT INTO producto (
+    descripcion,
+    id_color,
+    presentacion,
+    precio,
+    stock_actual,
+    stock_minimo,
+    id_referencia,
+    nombre
+)
+SELECT 'Veladora rosa navideña', c.id_color, 'paquete_x24', 96000.00, 12, 4, r.id_referencia, 'Veladora Rosa Navideña x24'
+FROM color c
+CROSS JOIN referencia r
+WHERE c.nombre = 'Rosado' AND r.nombre_referencia = 'Navideña Premium';
+
+INSERT INTO producto (
+    descripcion,
+    id_color,
+    presentacion,
+    precio,
+    stock_actual,
+    stock_minimo,
+    id_referencia,
+    nombre
+)
+SELECT 'Veladora celeste rústica', c.id_color, 'unidad', 6800.00, 16, 5, r.id_referencia, 'Veladora Celeste Rústica'
+FROM color c
+CROSS JOIN referencia r
+WHERE c.nombre = 'Celeste' AND r.nombre_referencia = 'Rústica';
+
+INSERT INTO pedido (
+    id_cliente,
+    porcentaje,
+    estado_pedido,
+    fecha_entrega,
+    id_vendedor,
+    tipo_pago,
+    estado_pago,
+    canal
+)
+SELECT c.id_usuario, 12.50, 'Pendiente', CURRENT_DATE + 6, v.id_usuario, 'Transferencia', 'Pagado', 'whatsapp'
+FROM usuario c
+CROSS JOIN usuario v
+WHERE c.usuario_login = 'cliente03' AND v.usuario_login = 'admin01';
+
+INSERT INTO pedido (
+    id_cliente,
+    porcentaje,
+    estado_pedido,
+    fecha_entrega,
+    id_vendedor,
+    tipo_pago,
+    estado_pago,
+    canal
+)
+SELECT c.id_usuario, 8.00, 'Pendiente', CURRENT_DATE + 9, v.id_usuario, 'Efectivo', 'Pendiente', 'facebook'
+FROM usuario c
+CROSS JOIN usuario v
+WHERE c.usuario_login = 'cliente04' AND v.usuario_login = 'ventas01';
+
+INSERT INTO pedido (
+    id_cliente,
+    porcentaje,
+    estado_pedido,
+    fecha_entrega,
+    id_vendedor,
+    tipo_pago,
+    estado_pago,
+    canal
+)
+SELECT c.id_usuario, 0.00, 'Alistamiento', CURRENT_DATE + 4, v.id_usuario, 'Crédito', 'Parcial', 'persona'
+FROM usuario c
+CROSS JOIN usuario v
+WHERE c.usuario_login = 'cliente05' AND v.usuario_login = 'admin01';
+
+INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+SELECT p.id_pedido, pr.id_producto, 2.00, 1, 6200.00
+FROM pedido p
+CROSS JOIN producto pr
+WHERE p.id_cliente = (SELECT id_usuario FROM usuario WHERE usuario_login = 'cliente03')
+  AND p.canal = 'whatsapp'
+  AND pr.nombre = 'Veladora Negra Artesanal';
+
+INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+SELECT p.id_pedido, pr.id_producto, 1.00, 0, 7200.00
+FROM pedido p
+CROSS JOIN producto pr
+WHERE p.id_cliente = (SELECT id_usuario FROM usuario WHERE usuario_login = 'cliente04')
+  AND p.canal = 'facebook'
+  AND pr.nombre = 'Veladora Naranja Festiva';
+
+INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+SELECT p.id_pedido, pr.id_producto, 3.00, 2, 6800.00
+FROM pedido p
+CROSS JOIN producto pr
+WHERE p.id_cliente = (SELECT id_usuario FROM usuario WHERE usuario_login = 'cliente05')
+  AND p.canal = 'persona'
+  AND pr.nombre = 'Veladora Celeste Rústica';
+
+INSERT INTO movimiento (
+    motivo,
+    tipo_movimiento,
+    id_usuario,
+    id_pedido
+)
+SELECT 'Producción', 'entrada', id_usuario, NULL
+FROM usuario WHERE usuario_login = 'ventas01';
+
+INSERT INTO movimiento (
+    motivo,
+    tipo_movimiento,
+    id_usuario,
+    id_pedido
+)
+SELECT 'Venta', 'salida', id_usuario, p.id_pedido
+FROM usuario u
+JOIN pedido p ON p.id_cliente = u.id_usuario
+WHERE u.usuario_login = 'cliente05';
+
+INSERT INTO detalle_movimiento (id_movimiento, id_producto, cantidad)
+SELECT m.id_movimiento, p.id_producto, 2.00
+FROM movimiento m
+CROSS JOIN producto p
+WHERE m.motivo = 'Producción'
+  AND p.nombre = 'Veladora Negra Artesanal';
+
+INSERT INTO detalle_movimiento (id_movimiento, id_producto, cantidad)
+SELECT m.id_movimiento, p.id_producto, 1.00
+FROM movimiento m
+CROSS JOIN producto p
+WHERE m.motivo = 'Venta'
+  AND p.nombre = 'Veladora Celeste Rústica';
+
+/* ============================================================
+   16. PEDIDOS Y VENTAS DE MESES ANTERIORES
+   ============================================================ */
+
+DO $$
+DECLARE
+    v_cliente_1 INTEGER;
+    v_cliente_2 INTEGER;
+    v_cliente_3 INTEGER;
+    v_cliente_4 INTEGER;
+    v_vendedor INTEGER;
+    v_pedido_1 INTEGER;
+    v_pedido_2 INTEGER;
+    v_pedido_3 INTEGER;
+    v_pedido_4 INTEGER;
+    v_prod_1 INTEGER;
+    v_prod_2 INTEGER;
+    v_prod_3 INTEGER;
+    v_movimiento INTEGER;
+BEGIN
+    SELECT id_usuario INTO v_cliente_1 FROM usuario WHERE usuario_login = 'cliente01';
+    SELECT id_usuario INTO v_cliente_2 FROM usuario WHERE usuario_login = 'cliente02';
+    SELECT id_usuario INTO v_cliente_3 FROM usuario WHERE usuario_login = 'cliente03';
+    SELECT id_usuario INTO v_cliente_4 FROM usuario WHERE usuario_login = 'cliente04';
+    SELECT id_usuario INTO v_vendedor FROM usuario WHERE usuario_login = 'admin01';
+
+    SELECT id_producto INTO v_prod_1 FROM producto WHERE nombre = 'Veladora Blanca Clásica';
+    SELECT id_producto INTO v_prod_2 FROM producto WHERE nombre = 'Veladora Roja Aromática';
+    SELECT id_producto INTO v_prod_3 FROM producto WHERE nombre = 'Veladora Verde Premium';
+
+    INSERT INTO pedido (
+        id_cliente,
+        porcentaje,
+        estado_pedido,
+        fecha_entrega,
+        fecha_registro,
+        id_vendedor,
+        tipo_pago,
+        estado_pago,
+        canal
+    )
+    VALUES (
+        v_cliente_1,
+        7.50,
+        'Alistamiento',
+        CURRENT_DATE - INTERVAL '3 months',
+        CURRENT_DATE - INTERVAL '3 months',
+        v_vendedor,
+        'Transferencia',
+        'Pagado',
+        'whatsapp'
+    )
+    RETURNING id_pedido INTO v_pedido_1;
+
+    INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+    VALUES (v_pedido_1, v_prod_1, 3.00, 2, 5000.00);
+
+    INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+    VALUES (v_pedido_1, v_prod_2, 2.00, 1, 6500.00);
+
+    INSERT INTO movimiento (motivo, tipo_movimiento, id_usuario, id_pedido)
+    VALUES ('Venta', 'salida', v_vendedor, v_pedido_1)
+    RETURNING id_movimiento INTO v_movimiento;
+
+    INSERT INTO detalle_movimiento (id_movimiento, id_producto, cantidad)
+    VALUES (v_movimiento, v_prod_1, 3.00),
+           (v_movimiento, v_prod_2, 2.00);
+
+    INSERT INTO pedido (
+        id_cliente,
+        porcentaje,
+        estado_pedido,
+        fecha_entrega,
+        fecha_registro,
+        id_vendedor,
+        tipo_pago,
+        estado_pago,
+        canal
+    )
+    VALUES (
+        v_cliente_2,
+        10.00,
+        'Alistamiento',
+        CURRENT_DATE - INTERVAL '2 months',
+        CURRENT_DATE - INTERVAL '2 months',
+        v_vendedor,
+        'Efectivo',
+        'Pagado',
+        'facebook'
+    )
+    RETURNING id_pedido INTO v_pedido_2;
+
+    INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+    VALUES (v_pedido_2, v_prod_3, 4.00, 3, 8500.00);
+
+    INSERT INTO movimiento (motivo, tipo_movimiento, id_usuario, id_pedido)
+    VALUES ('Venta', 'salida', v_vendedor, v_pedido_2)
+    RETURNING id_movimiento INTO v_movimiento;
+
+    INSERT INTO detalle_movimiento (id_movimiento, id_producto, cantidad)
+    VALUES (v_movimiento, v_prod_3, 4.00);
+
+    INSERT INTO pedido (
+        id_cliente,
+        porcentaje,
+        estado_pedido,
+        fecha_entrega,
+        fecha_registro,
+        id_vendedor,
+        tipo_pago,
+        estado_pago,
+        canal
+    )
+    VALUES (
+        v_cliente_3,
+        5.00,
+        'Entregado',
+        CURRENT_DATE - INTERVAL '1 month' + INTERVAL '2 days',
+        CURRENT_DATE - INTERVAL '1 month',
+        v_vendedor,
+        'Crédito',
+        'Pagado',
+        'instagram'
+    )
+    RETURNING id_pedido INTO v_pedido_3;
+
+    INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+    VALUES (v_pedido_3, v_prod_1, 2.00, 2, 5000.00);
+
+    INSERT INTO pedido (
+        id_cliente,
+        porcentaje,
+        estado_pedido,
+        fecha_entrega,
+        fecha_registro,
+        id_vendedor,
+        tipo_pago,
+        estado_pago,
+        canal
+    )
+    VALUES (
+        v_cliente_4,
+        12.00,
+        'Alistamiento',
+        CURRENT_DATE - INTERVAL '15 days',
+        CURRENT_DATE - INTERVAL '1 month',
+        v_vendedor,
+        'Transferencia',
+        'Pagado',
+        'facebook'
+    )
+    RETURNING id_pedido INTO v_pedido_4;
+
+    INSERT INTO detalle_pedido (id_pedido, id_producto, cantidad, alistamiento, precio_acordado)
+    VALUES (v_pedido_4, v_prod_2, 3.00, 2, 6500.00);
+
+    INSERT INTO movimiento (motivo, tipo_movimiento, id_usuario, id_pedido)
+    VALUES ('Venta', 'salida', v_vendedor, v_pedido_4)
+    RETURNING id_movimiento INTO v_movimiento;
+
+    INSERT INTO detalle_movimiento (id_movimiento, id_producto, cantidad)
+    VALUES (v_movimiento, v_prod_2, 3.00);
+END;
+$$;
+
 

@@ -1,12 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { fetchReports } from '../api/mockApi'
-import { MetricCard } from '../components/common/MetricCard'
-import { AnalyticsChart } from '../components/common/AnalyticsChart'
-import { StatsBarChart } from '../components/common/StatsBarChart'
 import { LoadingState } from '../components/common/LoadingState'
+import { ReportsCharts, ReportsHeader, ReportsInsights, ReportsMetrics, ReportsOperationChart, ReportsTable } from '../components/reports/ReportsBlocks'
 import { useToast } from '../context/ToastContext'
 import type { ReportData } from '../types'
-import { formatCurrency } from '../utils/formatters'
 
 export function ReportsPage() {
   const [report, setReport] = useState<ReportData | null>(null)
@@ -74,180 +71,12 @@ export function ReportsPage() {
     info('Reporte financiero exportado a CSV', 'Descarga Completa')
   }
 
-  return (
-    <>
-      <div className="section-header">
-        <div>
-          <h2 className="section-title">Informes de Ventas y Desempeño</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Valor de pedidos, volumen de ventas y comportamiento mensual
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <button type="button" className="btn-outline" onClick={handleExportCSV}>
-            <i className="ti ti-download" /> Exportar CSV
-          </button>
-          <button type="button" className="btn-primary" onClick={() => window.print()}>
-            <i className="ti ti-printer" /> Imprimir Informe
-          </button>
-        </div>
-      </div>
-
-      {/* Tarjetas de Métricas de Reporte */}
-      <div className="metrics-grid">
-        {report.cards.map((metric) => (
-          <MetricCard key={metric.label} metric={metric} />
-        ))}
-      </div>
-
-      <div className="business-insights" aria-label="Resumen comercial del rango seleccionado">
-        <div className="business-insight"><i className="ti ti-cash" /><span>Facturación del rango</span><strong>{formatCurrency(summary.income)}</strong></div>
-        <div className="business-insight"><i className="ti ti-receipt" /><span>Factura promedio</span><strong>{formatCurrency(summary.averageInvoice)}</strong></div>
-        <div className="business-insight"><i className="ti ti-chart-line" /><span>Variación mensual</span><strong className={monthlyVariation >= 0 ? 'positive' : 'negative'}>{monthlyVariation >= 0 ? '+' : ''}{monthlyVariation.toFixed(1)}%</strong></div>
-        <div className="business-insight"><i className="ti ti-award" /><span>Mejor período</span><strong>{bestPeriod?.period ?? 'Sin datos'}</strong></div>
-      </div>
-
-      {/* Gráfico y Panel de Desempeño */}
-      <div className="charts-row">
-        <div className="chart-card">
-          <div className="card-header">
-            <div>
-              <div className="card-title">Evolución mensual de pedidos</div>
-              <div className="card-sub">
-                {selectedRow
-                  ? `${selectedRow.period}: ${formatCurrency(selectedRow.income)} · ${selectedRow.salesCount ?? 0} pedidos · Factura ${formatCurrency(selectedRow.income / Math.max(1, selectedRow.salesCount ?? 0))}`
-                  : 'Comparativa mensual'}
-              </div>
-            </div>
-            <div className="period-pills" aria-label="Filtro de periodo">
-              <button
-                type="button"
-                className={`pill ${range === '6M' ? 'active' : ''}`}
-                onClick={() => setRange('6M')}
-              >
-                6 Meses
-              </button>
-              <button
-                type="button"
-                className={`pill ${range === '12M' ? 'active' : ''}`}
-                onClick={() => setRange('12M')}
-              >
-                12 Meses
-              </button>
-            </div>
-          </div>
-
-          <AnalyticsChart
-            valueLabel="Valor de pedidos"
-            points={visibleRows.map((row) => ({
-              label: row.period,
-              value: row.income,
-              secondary: row.salesCount ?? 0,
-              secondaryLabel: 'Pedidos',
-              detail: `Factura promedio ${formatCurrency(row.income / Math.max(1, row.salesCount ?? 0))}`,
-            }))}
-            onSelect={(point) => setActivePeriod(point.label)}
-          />
-
-          <div style={{ display: 'flex', gap: '20px', justifyContent: 'center', marginTop: '16px', fontSize: '0.8rem' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ width: '12px', height: '12px', background: 'var(--gold)', borderRadius: '3px' }} />
-              Valor de pedidos
-            </span>
-          </div>
-        </div>
-
-        {/* Resumen del Período Seleccionado */}
-        <div className="chart-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-          <div>
-            <div className="card-header" style={{ marginBottom: '16px' }}>
-              <div>
-                <div className="card-title">Balance del Período</div>
-                <div className="card-sub">{selectedRow ? `Datos de ${selectedRow.period}` : `Resumen del rango (${range})`}</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ background: 'var(--bg-input)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Facturación Total</span>
-                <div style={{ fontFamily: 'Outfit', fontSize: '1.75rem', fontWeight: 700, color: 'var(--gold)' }}>
-                  {formatCurrency(selectedRow?.income ?? 0)}
-                </div>
-              </div>
-
-              <div style={{ background: 'var(--bg-input)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Pedidos registrados</span>
-                <div style={{ fontFamily: 'Outfit', fontSize: '1.75rem', fontWeight: 700, color: 'var(--success)' }}>
-                  {selectedRow?.salesCount ?? 0}
-                </div>
-              </div>
-
-              <div style={{ background: 'var(--bg-input)', padding: '16px', borderRadius: 'var(--radius-md)' }}>
-                <span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>Factura promedio</span>
-                <div style={{ fontFamily: 'Outfit', fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-main)' }}>
-                  {formatCurrency((selectedRow?.income ?? 0) / Math.max(1, selectedRow?.salesCount ?? 0))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Gráfico de Barras: Comparativa de Dañadas, Vendidas y Pedidos */}
-      <div style={{ marginBottom: '24px' }}>
-        <StatsBarChart
-          data={visibleRows.map((row) => ({
-            label: row.period,
-            damaged: row.damaged ?? 0,
-            sold: row.units ?? row.salesCount ?? 0,
-            orders: row.salesCount ?? 0,
-          }))}
-          title="Estadísticas de Operación: Dañadas, Vendidas y Pedidos"
-          subtitle="Gráfico de barras comparativo: cuántas se dañaron, cuántas se vendieron y cuántos pedidos se hicieron por mes"
-        />
-      </div>
-
-      {/* Tabla Desglosada */}
-      <div className="table-card">
-        <table>
-          <thead>
-            <tr>
-              <th>Mes / Período</th>
-              <th>Pedidos Realizados</th>
-              <th>Facturación Total</th>
-              <th>Factura Promedio</th>
-              <th>Margen (%)</th>
-              <th>Estado</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map((row) => {
-              const marginPct = Math.round((row.profit / Math.max(1, row.income)) * 100)
-              const avgInvoice = row.income / Math.max(1, row.salesCount ?? 0)
-              return (
-                <tr key={row.period}>
-                  <td>
-                    <strong>{row.period}</strong>
-                  </td>
-                  <td>{row.salesCount ?? 0} órdenes</td>
-                  <td>
-                    <strong style={{ color: 'var(--gold)' }}>{formatCurrency(row.income)}</strong>
-                  </td>
-                  <td>
-                    <strong style={{ color: 'var(--success)' }}>{formatCurrency(avgInvoice)}</strong>
-                  </td>
-                  <td>
-                    <span className="badge badge-neutral">{marginPct}%</span>
-                  </td>
-                  <td>
-                    <span className="badge badge-success">Auditado</span>
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </>
-  )
+  return <>
+    <ReportsHeader onExport={handleExportCSV} />
+    <ReportsMetrics cards={report.cards} />
+    <ReportsInsights income={summary.income} averageInvoice={summary.averageInvoice} variation={monthlyVariation} bestPeriod={bestPeriod?.period} />
+    <ReportsCharts rows={visibleRows} selectedRow={selectedRow} range={range} onRange={setRange} onSelect={setActivePeriod} />
+    <ReportsOperationChart rows={visibleRows} />
+    <ReportsTable rows={visibleRows} />
+  </>
 }

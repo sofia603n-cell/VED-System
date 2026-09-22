@@ -285,13 +285,16 @@ export async function loginUser(identifier: string, password: string): Promise<U
 
 export async function fetchDashboard(): Promise<DashboardData> {
   const dashboard = await apiFetch<Record<string, unknown>>('/reportes/dashboard')
-  const salesSeries = Array.isArray(dashboard.sales_series) ? dashboard.sales_series.map((item) => ({
-    month: String((item as Record<string, unknown>).month ?? ''),
-    value: Number((item as Record<string, unknown>).value ?? 0),
-    orders: Number((item as Record<string, unknown>).orders ?? 0),
-    units: Number((item as Record<string, unknown>).units ?? 0),
-    damaged: Number((item as Record<string, unknown>).damaged ?? 0),
-  })) : []
+  const salesSeries = Array.isArray(dashboard.sales_series) ? dashboard.sales_series.map((item) => {
+    const raw = item as Record<string, unknown>
+    return {
+      month: String(raw.month ?? ''),
+      value: Number(raw.value ?? 0),
+      orders: Number(raw.orders ?? 0),
+      units: Number(raw.units ?? 0),
+      damaged: Number(raw.damaged ?? raw.danadas ?? 0),
+    }
+  }) : []
   const categoryItems = Array.isArray(dashboard.category_share) ? dashboard.category_share.map((item) => ({
     label: String((item as Record<string, unknown>).label ?? 'General'),
     percent: Number((item as Record<string, unknown>).percent ?? 0),

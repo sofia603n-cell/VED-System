@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loginUser } from '../api/mockApi'
+import { LoginCard } from '../components/login/LoginCard'
 import { useToast } from '../context/ToastContext'
 import type { User } from '../types'
 
@@ -74,100 +75,5 @@ export function LoginPage({ user, setUser }: { user: User | null; setUser: (user
     setError('')
   }
 
-  return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-logo">
-          <img src="/logo.jpeg" alt="Velas Estrella de David" className="login-logo-img" />
-        </div>
-
-        <h1 className="login-title">Velas Estrella de David</h1>
-        <p className="login-sub">Sistema Integral de Inventario, Ventas y Gestión</p>
-
-        {error && (
-          <div className="login-error">
-            <i className="ti ti-alert-circle" />
-            <div style={{ flex: 1 }}>{error}</div>
-            {loginAttempts >= maxAttempts && (
-              <button
-                type="button"
-                onClick={handleResetAttempts}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: 'var(--gold)',
-                  textDecoration: 'underline',
-                  cursor: 'pointer',
-                  fontSize: '0.75rem',
-                }}
-              >
-                Desbloquear
-              </button>
-            )}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group" style={{ textAlign: 'left' }}>
-            <label className="form-label">Usuario, Correo o DNI</label>
-            <input
-              type="text"
-              className="form-input"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              placeholder="ej. ana@velas.test o 1234567890"
-              autoComplete="username"
-              required
-            />
-          </div>
-
-          <div className="form-group" style={{ textAlign: 'left' }}>
-            <label className="form-label">Contraseña</label>
-            <div className="password-wrap">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                className="form-input"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-                minLength={4}
-                required
-              />
-              <button
-                type="button"
-                className="eye-btn"
-                onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
-              >
-                <i className={`ti ${showPassword ? 'ti-eye-off' : 'ti-eye'}`} />
-              </button>
-            </div>
-            {loginAttempts > 0 && loginAttempts < maxAttempts && (
-              <span style={{ fontSize: '0.72rem', color: 'var(--warning)', marginTop: '4px', display: 'block' }}>
-                Intentos restantes antes de bloqueo: {maxAttempts - loginAttempts}
-              </span>
-            )}
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary"
-            style={{ width: '100%', padding: '12px', marginTop: '8px' }}
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <>
-                <i className="ti ti-loader ti-spin" /> Verificando...
-              </>
-            ) : (
-              <>
-                <i className="ti ti-login" /> Iniciar sesión
-              </>
-            )}
-          </button>
-        </form>
-      </div>
-    </div>
-  )
+  return <div className="login-page"><LoginCard email={email} password={password} error={error} loading={isLoading} attempts={loginAttempts} maxAttempts={maxAttempts} showPassword={showPassword} onEmail={setEmail} onPassword={setPassword} onTogglePassword={() => setShowPassword((value) => !value)} onResetAttempts={handleResetAttempts} onSubmit={handleSubmit} /></div>
 }

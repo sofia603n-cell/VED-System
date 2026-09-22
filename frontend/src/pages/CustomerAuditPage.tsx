@@ -1,17 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { fetchCustomerAudit } from '../api/mockApi'
-import { MetricCard } from '../components/common/MetricCard'
+import { CustomerAuditFilters, CustomerAuditHeader, CustomerAuditMetrics, CustomerAuditTable } from '../components/customerAudit/CustomerAuditBlocks'
 import { useToast } from '../context/ToastContext'
 import type { CustomerAuditEntry } from '../types'
-import { formatCurrency } from '../utils/formatters'
-
-function formatDate(value?: string) {
-  if (!value) return 'Sin pedidos'
-  const date = new Date(`${value}T00:00:00`)
-  return Number.isNaN(date.getTime())
-    ? value
-    : new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(date)
-}
 
 export function CustomerAuditPage() {
   const [customers, setCustomers] = useState<CustomerAuditEntry[]>([])
@@ -73,58 +64,10 @@ export function CustomerAuditPage() {
     info('Auditoría de clientes exportada a CSV', 'Descarga completa')
   }
 
-  return (
-    <>
-      <div className="section-header">
-        <div>
-          <h2 className="section-title">Auditoría de Clientes</h2>
-          <span style={{ fontSize: '0.8rem', color: 'var(--text-dim)' }}>
-            Clientes registrados, su estado y trazabilidad comercial. Esta vista es solo de consulta.
-          </span>
-        </div>
-        <button type="button" className="btn-outline" onClick={exportCsv} disabled={loading || !filteredCustomers.length}>
-          <i className="ti ti-download" /> Exportar CSV
-        </button>
-      </div>
-
-      <div className="metrics-grid">
-        <MetricCard metric={{ label: 'Clientes registrados', value: String(registered), subtext: 'Cuentas con rol cliente', trendType: 'delta-up', icon: 'ti-user-check' }} />
-        <MetricCard metric={{ label: 'Clientes activos', value: String(active), subtext: 'Disponibles para pedidos', trendType: 'delta-up', icon: 'ti-users' }} />
-        <MetricCard metric={{ label: 'Pedidos asociados', value: String(totalOrders), subtext: 'Trazabilidad comercial', trendType: 'delta-up', icon: 'ti-shopping-bag' }} />
-      </div>
-
-      <div className="filters-row">
-        <input type="search" className="form-input" style={{ maxWidth: '360px' }} placeholder="Buscar por nombre, documento, correo o teléfono..." value={query} onChange={(event) => setQuery(event.target.value)} />
-        <select className="form-input small" style={{ width: 'auto' }} value={status} onChange={(event) => setStatus(event.target.value as typeof status)}>
-          <option value="todos">Todos los estados</option>
-          <option value="activo">Activos</option>
-          <option value="inactivo">Inactivos</option>
-        </select>
-        <button type="button" className="btn-outline" onClick={() => void loadCustomers()} disabled={loading}>
-          <i className={`ti ${loading ? 'ti-loader-2' : 'ti-refresh'}`} /> {loading ? 'Actualizando...' : 'Actualizar'}
-        </button>
-      </div>
-
-      <div className="table-card">
-        <table>
-          <thead><tr><th>Cliente</th><th>Contacto</th><th>Registro</th><th>Estado</th><th>Pedidos</th><th>Total comprado</th><th>Último pedido</th></tr></thead>
-          <tbody>
-            {!loading && filteredCustomers.length === 0 ? (
-              <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-dim)', padding: '32px' }}>No hay clientes que coincidan con los filtros actuales.</td></tr>
-            ) : filteredCustomers.map((customer) => (
-              <tr key={`${customer.id}-${customer.name}`}>
-                <td><strong>{customer.name}</strong><br /><span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>{customer.document}</span></td>
-                <td><span>{customer.email}</span><br /><span style={{ fontSize: '0.78rem', color: 'var(--text-dim)' }}>{customer.phone}</span></td>
-                <td><span className={`badge ${customer.registered ? 'badge-success' : 'badge-neutral'}`}>{customer.registered ? 'Registrado' : 'En pedidos'}</span></td>
-                <td><span className={`badge ${customer.status === 'activo' ? 'badge-success' : 'badge-danger'}`}>{customer.status}</span></td>
-                <td>{customer.orders}</td>
-                <td><strong>{formatCurrency(customer.totalSpent)}</strong></td>
-                <td>{formatDate(customer.lastOrderDate)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  )
+  return <>
+    <CustomerAuditHeader loading={loading} canExport={Boolean(filteredCustomers.length)} onExport={exportCsv} />
+    <CustomerAuditMetrics registered={registered} active={active} orders={totalOrders} />
+    <CustomerAuditFilters query={query} status={status} loading={loading} onQuery={setQuery} onStatus={setStatus} onReload={() => void loadCustomers()} />
+    <CustomerAuditTable customers={filteredCustomers} loading={loading} />
+  </>
 }
